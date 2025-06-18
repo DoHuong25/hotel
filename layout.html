@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    
+    <title>Hệ Thống Quản Lý Khách Sạn</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="bg-gray-100">
+
+  <div class="max-w-7xl mx-auto my-8 bg-white rounded-xl shadow-lg overflow-hidden">
+    
+    <header class="header p-6 flex items-center justify-between">
+      <h1 class="text-2xl font-bold"><i class="fa-solid fa-hotel mr-2"></i>Hệ Thống Quản Lý Khách Sạn</h1>
+    </header>
+
+    <nav class="navbar border-b px-4 py-3 flex gap-4 justify-center">
+        <a href="index.html" class="nav-link"><i class="fa-solid fa-chart-pie mr-1"></i>Thống kê</a>
+        <a href="khachhang.html" class="nav-link"><i class="fa-solid fa-users mr-1"></i>Khách hàng</a>
+        <a href="phong.html" class="nav-link"><i class="fa-solid fa-bed mr-1"></i>Phòng</a>
+        <a href="dichvu.html" class="nav-link"><i class="fa-solid fa-concierge-bell mr-1"></i>Dịch vụ</a>
+        <a href="hoadon.html" class="nav-link"><i class="fa-solid fa-receipt mr-1"></i>Hóa đơn</a>
+        <a href="datphong.html" class="nav-link"><i class="fa-solid fa-calendar-check mr-1"></i>Đặt phòng</a>
+    </nav>
+
+    <main class="p-6">
+        
+        <h2 class="text-2xl font-semibold text-gray-800 mb-6">Đây là khu vực nội dung chính</h2>
+        <p>Bạn sẽ điền nội dung của từng trang vào đây.</p>
+
+    </main>
+  </div>
+
+  <script>
+    // Script để active link navbar
+    document.addEventListener('DOMContentLoaded', () => {
+        const path = window.location.pathname.split('/').pop();
+        if (path === '') path = 'index.html'; // Mặc định là trang chủ
+        
+        const links = document.querySelectorAll('.nav-link');
+        links.forEach(link => {
+            if (link.getAttribute('href') === path) {
+                link.classList.add('active');
+            }
+        });
+    });
+  </script>
+
+</body>
+</html>

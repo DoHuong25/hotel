@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <title>Quản lý Dịch vụ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+
+    <header class="bg-blue-600 text-white py-6 text-center shadow">
+        <h1 class="text-3xl font-bold">Hệ thống Quản lý Khách sạn</h1>
+    </header>
+
+    <nav class="bg-white shadow flex justify-center gap-6 py-4 text-blue-700 font-semibold">
+        <a href="index.html">Trang chính</a>
+        <a href="khachhang.html">Khách hàng</a>
+        <a href="phong.html">Phòng</a>
+        <a href="dichvu.html" class="underline text-blue-900">Dịch vụ</a>
+        <a href="hoadon.html">Hóa đơn</a>
+        <a href="datphong.html">Đặt phòng</a>
+    </nav>
+
+    <main class="p-6 max-w-6xl mx-auto space-y-4">
+
+        <div class="flex gap-2">
+            <input id="searchInput" type="text" placeholder="Tìm tên dịch vụ..." class="border px-3 py-2 rounded w-full" />
+            <button onclick="fetchAndRenderDV()" class="bg-blue-600 text-white px-4 py-2 rounded">Tải lại</button>
+            <button onclick="openForm()" class="bg-green-600 text-white px-4 py-2 rounded">+ Thêm</button>
+        </div>
+
+        <div class="overflow-auto bg-white shadow rounded">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-200 text-gray-700">
+                    <tr>
+                        <th class="p-2 text-center">Mã</th>
+                        <th class="p-2 text-left">Tên</th>
+                        <th class="p-2 text-right">Giá</th>
+                        <th class="p-2 text-left">Mô tả</th>
+                        <th class="p-2 text-center">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="dvTable"></tbody> </table>
+        </div>
+
+        <div id="formPopup" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center">
+            <div class="bg-white p-6 rounded shadow w-full max-w-md">
+                <h2 class="text-xl font-bold mb-4" id="formTitle">Thêm Dịch vụ</h2>
+                <form id="dvForm" class="space-y-3">
+                    <input type="hidden" id="ma_dv" />
+                    <input id="ten_dv" placeholder="Tên dịch vụ" required class="w-full border px-3 py-2 rounded" />
+                    <input id="don_gia" placeholder="Giá" type="number" required class="w-full border px-3 py-2 rounded" />
+                    <textarea id="mo_ta" placeholder="Mô tả dịch vụ" class="w-full border px-3 py-2 rounded"></textarea>
+                    <div class="text-right mt-2 space-x-2">
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-1 rounded">Lưu</button>
+                        <button type="button" onclick="closeForm()" class="bg-gray-500 text-white px-4 py-1 rounded">Hủy</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="detailPopup" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center">
+            <div class="bg-white p-6 rounded shadow w-full max-w-md">
+                <h2 class="text-xl font-bold mb-4">Chi tiết Dịch vụ</h2>
+                <div id="detailContent" class="text-sm space-y-1"></div>
+                <div class="text-right mt-4">
+                    <button onclick="closeDetail()" class="bg-blue-600 text-white px-4 py-1 rounded">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Hàm để tải và hiển thị dữ liệu dịch vụ
+        async function fetchAndRenderDV() {
+            const search = document.getElementById("searchInput").value.toLowerCase();
+            const tbody = document.getElementById("dvTable");
+            tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">Đang tải dữ liệu...</td></tr>`;
+
+            try {
+                // Thêm tham số tìm kiếm vào URL nếu có giá trị
+                const url = search ? `/api/dichvu?search=${encodeURIComponent(search)}` : '/api/dichvu';
+                // Đảm bảo không dùng cache khi fetch dữ liệu
+                const res = await fetch(url, { cache: 'no-cache' }); 
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                const services = await res.json();
+                
+                tbody.innerHTML = ""; // Xóa thông báo "Đang tải"
+
+                if (services.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">Không tìm thấy dịch vụ nào.</td></tr>`;
+                    return;
+                }
+
+                services.forEach(d => {
+                    const tr = document.createElement("tr");
+                    tr.className = "border-t";
+                    
+                    const giaHienThi = d.don_gia ? parseFloat(d.don_gia).toLocaleString('vi-VN') + ' đ' : '0 đ';
+                    
+                    tr.innerHTML = `
+                        <td class="p-2 text-center">${d.ma_dv}</td>
+                        <td class="p-2 text-left">${d.ten_dv}</td>
+                        <td class="p-2 text-right">${giaHienThi}</td>
+                        <td class="p-2 text-left">${d.mo_ta || '—'}</td>
+                        <td class="p-2 space-x-1 text-center">
+                            <button onclick='viewDV(${JSON.stringify(d)})' class="text-blue-600 hover:underline">👁</button>
+                            <button onclick='editDV(${JSON.stringify(d)})' class="text-yellow-600 hover:underline">✏</button>
+                            <button onclick='deleteDV("${d.ma_dv}")' class="text-red-600 hover:underline">🗑</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch(error) {
+                console.error("Lỗi tải dữ liệu:", error);
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Lỗi tải dữ liệu. Vui lòng thử lại.</td></tr>`;
+            }
+        }
+
+        function openForm() {
+            document.getElementById("dvForm").reset();
+            document.getElementById("ma_dv").value = "";
+            document.getElementById("formTitle").innerText = "Thêm Dịch vụ";
+            document.getElementById("formPopup").classList.remove("hidden");
+            document.getElementById("formPopup").classList.add("flex");
+        }
+
+        function closeForm() {
+            document.getElementById("formPopup").classList.add("hidden");
+            document.getElementById("formPopup").classList.remove("flex");
+        }
+
+        function editDV(dv) {
+            openForm();
+            document.getElementById("formTitle").innerText = "Sửa Dịch vụ";
+            document.getElementById("ma_dv").value = dv.ma_dv;
+            document.getElementById("ten_dv").value = dv.ten_dv;
+            document.getElementById("don_gia").value = dv.don_gia;
+            document.getElementById("mo_ta").value = dv.mo_ta;
+        }
+
+        function viewDV(d) {
+            const div = document.getElementById("detailContent");
+            const giaHienThi = d.don_gia ? parseFloat(d.don_gia).toLocaleString('vi-VN') + ' đ' : '0 đ';
+            div.innerHTML = `
+                <p><b>Mã DV:</b> ${d.ma_dv}</p>
+                <p><b>Tên:</b> ${d.ten_dv}</p>
+                <p><b>Giá:</b> ${giaHienThi}</p>
+                <p><b>Mô tả:</b> ${d.mo_ta || '—'}</p>
+            `;
+            document.getElementById("detailPopup").classList.remove("hidden");
+            document.getElementById("detailPopup").classList.add("flex");
+        }
+
+        function closeDetail() {
+            document.getElementById("detailPopup").classList.add("hidden");
+            document.getElementById("detailPopup").classList.remove("flex");
+        }
+
+        async function deleteDV(ma_dv) {
+            if (confirm("Bạn có chắc muốn xoá dịch vụ này không?")) {
+                try {
+                    const res = await fetch('/api/dichvu/' + ma_dv, { method: 'DELETE' });
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    alert("Xóa dịch vụ thành công!");
+                    fetchAndRenderDV(); // Tải lại dữ liệu sau khi xóa
+                } catch (error) {
+                    console.error("Lỗi khi xóa dịch vụ:", error);
+                    alert("Có lỗi xảy ra khi xóa dịch vụ. Vui lòng thử lại.");
+                }
+            }
+        }
+
+        document.getElementById("dvForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const body = {
+                ten_dv: document.getElementById("ten_dv").value,
+                don_gia: Number(document.getElementById("don_gia").value),
+                mo_ta: document.getElementById("mo_ta").value,
+            };
+            const ma_dv = document.getElementById("ma_dv").value;
+            const method = ma_dv ? 'PUT' : 'POST';
+            const url = ma_dv ? '/api/dichvu/' + ma_dv : '/api/dichvu';
+
+            try {
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                alert(ma_dv ? "Cập nhật dịch vụ thành công!" : "Thêm dịch vụ thành công!");
+                closeForm();
+                fetchAndRenderDV(); // Tải lại dữ liệu sau khi thêm/sửa
+            } catch (error) {
+                console.error("Lỗi khi lưu dịch vụ:", error);
+                alert("Có lỗi xảy ra khi lưu dịch vụ. Vui lòng thử lại.");
+            }
+        });
+
+        // Gắn sự kiện 'input' để tìm kiếm tức thì
+        document.getElementById('searchInput').addEventListener('input', fetchAndRenderDV);
+
+        // Tải dữ liệu lần đầu khi trang được mở
+        fetchAndRenderDV();
+    </script>
+
+</body>
+</html>

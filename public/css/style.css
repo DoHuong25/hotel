@@ -1,0 +1,87 @@
+/* File: public/css/style.css */
+body {
+    font-family: 'Inter', sans-serif;
+    /* Nền xám cho toàn bộ trang, giống hệt mẫu.txt */
+    background-color: #f3f4f6; /* Tailwind class: bg-gray-100 */
+}
+
+/* === CÁC STYLE TÙY CHỈNH CHO TOÀN BỘ GIAO DIỆN === */
+
+/* Header & Navbar */
+.header {
+    background-color: #4338ca; /* Indigo-700 */
+    color: white;
+}
+.navbar {
+    background-color: white;
+}
+.nav-link {
+    color: #374151; /* Gray-700 */
+    padding-bottom: 6px;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease-in-out;
+}
+.nav-link:hover {
+    color: #4f46e5; /* Indigo-600 */
+}
+.nav-link.active {
+    color: #4f46e5; /* Indigo-600 */
+    font-weight: 600;
+    border-bottom-color: #4f46e5; /* Indigo-600 */
+}
+
+/* Modal (Hộp thoại) */
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+    transition: opacity 0.3s ease;
+}
+.modal-content {
+    background-color: white;
+    transition: transform 0.3s ease;
+    transform: translateY(-20px);
+}
+.modal-open .modal-content {
+    transform: translateY(0);
+}
+
+
+/* Toast (Thông báo) */
+.toast {
+    position: fixed;
+    top: 1.25rem;
+    right: 1.25rem;
+    z-index: 100;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    color: white;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    opacity: 0;
+    transform: translateX(100%);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+.toast.success {
+    background-color: #22c55e; /* Green-500 */
+}
+.toast.error {
+    background-color: #ef4444; /* Red-500 */
+}
+
+/* Table */
+table th {
+    font-weight: 600;
+    color: #4b5563; /* Gray-600 */
+    background-color: #f9fafb; /* Gray-50 */
+}
+table td {
+    color: #374151; /* Gray-700 */
+}
+table tbody tr:hover {
+    background-color: #f9fafb; /* Gray-50 */
+}

@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <title>Quản lý Hóa đơn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Tùy chỉnh nhỏ để các popup hiện ra đẹp hơn */
+        .popup-container {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 50;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
+        }
+        .popup-container.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .popup-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 32rem; /* default max-w-md */
+            transform: translateY(-20px);
+            transition: transform 0.3s ease-out;
+        }
+        .popup-container.active .popup-content {
+            transform: translateY(0);
+        }
+        /* Overrides for specific popup sizes */
+        #detailPopup .popup-content {
+            max-width: 40rem; /* max-w-lg */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+
+    <header class="bg-blue-600 text-white py-6 text-center shadow-md">
+        <h1 class="text-3xl font-bold">Hệ thống Quản lý Khách sạn</h1>
+    </header>
+
+    <nav class="bg-white shadow-sm flex justify-center gap-6 py-4 text-blue-700 font-semibold text-lg">
+        <a href="index.html" class="hover:text-blue-900 transition duration-200">Trang chính</a>
+        <a href="khachhang.html" class="hover:text-blue-900 transition duration-200">Khách hàng</a>
+        <a href="phong.html" class="hover:text-blue-900 transition duration-200">Phòng</a>
+        <a href="dichvu.html" class="hover:text-blue-900 transition duration-200">Dịch vụ</a>
+        <a href="hoadon.html" class="underline text-blue-900 font-bold">Hóa đơn</a>
+        <a href="datphong.html" class="hover:text-blue-900 transition duration-200">Đặt phòng</a>
+    </nav>
+
+    <main class="p-6 max-w-6xl mx-auto space-y-6">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Danh sách Hóa đơn</h2>
+
+        <div class="flex flex-col sm:flex-row gap-3 mb-4">
+            <input id="searchInput" type="text" placeholder="Tìm mã hóa đơn hoặc mã phiếu..."
+                   class="flex-grow border border-gray-300 px-4 py-2 rounded-lg shadow-sm
+                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            <button onclick="fetchAndRender()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded-lg
+                           shadow-md transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
+                <i class="fas fa-sync-alt mr-2"></i> Tải lại
+            </button>
+        </div>
+
+        <div class="overflow-x-auto bg-white shadow-lg rounded-lg">
+            <table class="min-w-full divide-y divide-gray-200 text-sm text-gray-700">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="p-4 text-left font-semibold uppercase tracking-wider">Mã HĐ</th>
+                        <th class="p-4 text-left font-semibold uppercase tracking-wider">Mã Phiếu</th>
+                        <th class="p-4 text-left font-semibold uppercase tracking-wider">Ngày Lập</th>
+                        <th class="p-4 text-right font-semibold uppercase tracking-wider">Tổng Tiền</th>
+                        <th class="p-4 text-left font-semibold uppercase tracking-wider">Trạng Thái</th>
+                        <th class="p-4 text-center font-semibold uppercase tracking-wider">Hành Động</th>
+                    </tr>
+                </thead>
+                <tbody id="hdTable" class="divide-y divide-gray-100">
+                    <tr><td colspan="6" class="p-6 text-center text-gray-500">Đang tải hóa đơn...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="popupTrangThai" class="popup-container">
+            <div class="popup-content">
+                <h2 class="text-2xl font-bold mb-5 text-gray-800">Cập nhật trạng thái thanh toán</h2>
+                <form id="formTrangThai" class="space-y-5">
+                    <input type="hidden" id="update_ma_hd" />
+                    <div>
+                        <label for="update_trang_thai" class="block text-base font-medium text-gray-700 mb-2">Chọn trạng thái mới:</label>
+                        <select id="update_trang_thai"
+                                class="w-full border border-gray-300 px-4 py-2 rounded-md focus:outline-none
+                                       focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                            <option value="chua_thanh_toan">Chưa thanh toán</option>
+                            <option value="da_thanh_toan">Đã thanh toán</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button type="submit"
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-lg
+                                       shadow-md transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            Lưu thay đổi
+                        </button>
+                        <button type="button" onclick="closePopup('popupTrangThai')"
+                                class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-5 py-2 rounded-lg
+                                       shadow-md transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            Hủy
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="detailPopup" class="popup-container">
+            <div class="popup-content">
+                <h2 class="text-2xl font-bold mb-5 text-gray-800">Chi tiết Hóa đơn</h2>
+                <div id="detailContent" class="text-base text-gray-700 leading-relaxed space-y-2 max-h-96 overflow-y-auto pr-2">
+                    </div>
+                <div class="flex justify-end mt-6">
+                    <button onclick="closePopup('detailPopup')"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-lg
+                                   shadow-md transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Đóng
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="editPopup" class="popup-container">
+            <div class="popup-content">
+                <h2 class="text-2xl font-bold mb-5 text-gray-800">Chỉnh sửa Hóa đơn</h2>
+                <form id="editForm" class="space-y-5">
+                    <input type="hidden" id="edit_ma_hd" />
+                    <div>
+                        <label for="edit_ma_phieu" class="block text-base font-medium text-gray-700 mb-2">Mã Phiếu Đặt:</label>
+                        <input type="text" id="edit_ma_phieu" readonly
+                               class="w-full border border-gray-300 px-4 py-2 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed" />
+                    </div>
+                    <div>
+                        <label for="edit_ngay_lap" class="block text-base font-medium text-gray-700 mb-2">Ngày Lập:</label>
+                        <input type="date" id="edit_ngay_lap" required
+                               class="w-full border border-gray-300 px-4 py-2 rounded-md focus:outline-none
+                                      focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    </div>
+                    <div>
+                        <label for="edit_tong_tien" class="block text-base font-medium text-gray-700 mb-2">Tổng Tiền:</label>
+                        <input type="number" id="edit_tong_tien" step="0.01" min="0" required
+                               class="w-full border border-gray-300 px-4 py-2 rounded-md focus:outline-none
+                                      focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    </div>
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button type="submit"
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-lg
+                                       shadow-md transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            Lưu thay đổi
+                        </button>
+                        <button type="button" onclick="closePopup('editPopup')"
+                                class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-5 py-2 rounded-lg
+                                       shadow-md transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            Hủy
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        let allInvoices = []; // Biến toàn cục để lưu trữ tất cả hóa đơn đã tải
+
+        /**
+         * Hàm chung để mở popup.
+         * @param {string} popupId - ID của popup (ví dụ: 'popupTrangThai', 'detailPopup', 'editPopup').
+         */
+        function openPopup(popupId) {
+            document.getElementById(popupId).classList.add('active');
+        }
+
+        /**
+         * Hàm chung để đóng popup.
+         * @param {string} popupId - ID của popup.
+         */
+        function closePopup(popupId) {
+            document.getElementById(popupId).classList.remove('active');
+        }
+
+        /**
+         * Tải tất cả hóa đơn từ API và hiển thị chúng.
+         * Bao gồm xử lý lỗi và hiển thị trạng thái tải.
+         */
+        async function fetchAndRender() {
+            const tbody = document.getElementById("hdTable");
+            tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-500">Đang tải hóa đơn...</td></tr>';
+
+            try {
+                // Đảm bảo đường dẫn API chính xác và cấu hình cache nếu cần
+                const res = await fetch('/api/hoadon', { cache: 'no-cache' });
+                if (!res.ok) {
+                    const errorDetails = await res.text();
+                    throw new Error(`Lỗi HTTP! Trạng thái: ${res.status}, Chi tiết: ${errorDetails}`);
+                }
+                allInvoices = await res.json();
+                renderInvoices(); // Render các hóa đơn đã tải
+            } catch (error) {
+                console.error("Lỗi khi tải hóa đơn:", error);
+                tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-red-500">Lỗi tải hóa đơn. Vui lòng kiểm tra console hoặc server.</td></tr>';
+                alert(`Không thể tải hóa đơn: ${error.message}`);
+            }
+        }
+
+        /**
+         * Hiển thị các hóa đơn trong bảng, áp dụng bộ lọc tìm kiếm.
+         */
+        function renderInvoices() {
+            const search = document.getElementById("searchInput").value.toLowerCase();
+            const tbody = document.getElementById("hdTable");
+            tbody.innerHTML = ""; // Xóa các hàng hiện có
+
+            const filteredInvoices = allInvoices.filter(h =>
+                (h.ma_hd && h.ma_hd.toLowerCase().includes(search)) || // Kiểm tra h.ma_hd tồn tại trước khi gọi toLowerCase
+                (h.ma_phieu && h.ma_phieu.toLowerCase().includes(search))
+            );
+
+            if (filteredInvoices.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-500">Không tìm thấy hóa đơn nào.</td></tr>';
+                return;
+            }
+
+            filteredInvoices.forEach(h => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-blue-50 transition duration-150 ease-in-out";
+
+                const formattedTongTien = parseFloat(h.tong_tien || 0).toLocaleString('vi-VN') + ' đ';
+                const displayNgayLap = h.ngay_lap ? new Date(h.ngay_lap).toLocaleDateString('vi-VN') : 'N/A';
+                const displayTrangThai = h.trang_thai_thanh_toan || 'N/A';
+
+                tr.innerHTML = `
+                    <td class="p-4">${h.ma_hd || 'N/A'}</td>
+                    <td class="p-4">${h.ma_phieu || 'N/A'}</td>
+                    <td class="p-4">${displayNgayLap}</td>
+                    <td class="p-4 text-right font-mono">${formattedTongTien}</td>
+                    <td class="p-4">
+                        <button onclick='showStatusPopup("${h.ma_hd}", "${displayTrangThai}")'
+                                class="text-blue-700 hover:text-blue-900 underline font-medium">
+                            ${displayTrangThai}
+                        </button>
+                    </td>
+                    <td class="p-4 text-center space-x-2">
+                        <button onclick='viewInvoiceDetail(${JSON.stringify(h)})'
+                                class="text-blue-600 hover:text-blue-800 transition duration-150 ease-in-out" title="Xem chi tiết">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button onclick='editInvoice("${h.ma_hd}", ${JSON.stringify(h)})'
+                                class="text-yellow-600 hover:text-yellow-800 transition duration-150 ease-in-out" title="Chỉnh sửa">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick='deleteInvoice("${h.ma_hd}")'
+                                class="text-red-600 hover:text-red-800 transition duration-150 ease-in-out" title="Xóa">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        /**
+         * Hiển thị popup cập nhật trạng thái thanh toán.
+         * @param {string} ma_hd - Mã hóa đơn.
+         * @param {string} trang_thai - Trạng thái hiện tại.
+         */
+        function showStatusPopup(ma_hd, trang_thai) {
+            document.getElementById("update_ma_hd").value = ma_hd;
+            document.getElementById("update_trang_thai").value = trang_thai;
+            openPopup('popupTrangThai');
+        }
+
+        /**
+         * Lắng nghe sự kiện submit của form cập nhật trạng thái.
+         */
+        document.getElementById("formTrangThai").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const ma_hd = document.getElementById("update_ma_hd").value;
+            const trang_thai = document.getElementById("update_trang_thai").value;
+
+            try {
+                const res = await fetch(`/api/hoadon/${ma_hd}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ trang_thai_thanh_toan: trang_thai })
+                });
+
+                if (!res.ok) {
+                    const errorDetails = await res.text();
+                    throw new Error(`Lỗi HTTP! Trạng thái: ${res.status}, Chi tiết: ${errorDetails}`);
+                }
+                alert('Cập nhật trạng thái thành công!');
+                closePopup('popupTrangThai');
+                fetchAndRender(); // Tải lại dữ liệu sau khi cập nhật
+            } catch (error) {
+                console.error("Lỗi khi cập nhật trạng thái:", error);
+                alert(`Cập nhật trạng thái thất bại: ${error.message}`);
+            }
+        });
+
+        /**
+         * Xóa một hóa đơn sau khi xác nhận.
+         * @param {string} ma_hd - Mã hóa đơn cần xóa.
+         */
+        async function deleteInvoice(ma_hd) {
+            if (!confirm("Bạn có chắc chắn muốn xóa hóa đơn này không?")) {
+                return;
+            }
+            try {
+                const res = await fetch(`/api/hoadon/${ma_hd}`, { method: 'DELETE' });
+                if (!res.ok) {
+                    const errorDetails = await res.text();
+                    throw new Error(`Lỗi HTTP! Trạng thái: ${res.status}, Chi tiết: ${errorDetails}`);
+                }
+                alert('Xóa hóa đơn thành công!');
+                fetchAndRender(); // Tải lại dữ liệu sau khi xóa
+            } catch (error) {
+                console.error("Lỗi khi xóa hóa đơn:", error);
+                alert(`Xóa hóa đơn thất bại: ${error.message}`);
+            }
+        }
+
+        /**
+         * Hiển thị thông tin chi tiết của một hóa đơn trong popup.
+         * @param {object} hd - Đối tượng hóa đơn chứa đầy đủ thông tin.
+         */
+        function viewInvoiceDetail(hd) {
+            const detailDiv = document.getElementById("detailContent");
+            detailDiv.innerHTML = ""; // Xóa nội dung cũ
+
+            // --- Thông tin cơ bản của Hóa đơn ---
+            detailDiv.innerHTML += `<h3 class="text-xl font-semibold mb-3 text-blue-700">Thông tin Hóa đơn</h3>`;
+            detailDiv.innerHTML += `<p><b>Mã HĐ:</b> ${hd.ma_hd || 'N/A'}</p>`;
+            detailDiv.innerHTML += `<p><b>Mã phiếu:</b> ${hd.ma_phieu || 'N/A'}</p>`;
+            detailDiv.innerHTML += `<p><b>Ngày lập:</b> ${hd.ngay_lap ? new Date(hd.ngay_lap).toLocaleDateString('vi-VN') : 'N/A'}</p>`;
+            detailDiv.innerHTML += `<p><b>Tổng tiền:</b> ${parseFloat(hd.tong_tien || 0).toLocaleString('vi-VN')} đ</p>`;
+            detailDiv.innerHTML += `<p><b>Trạng thái:</b> ${hd.trang_thai_thanh_toan || 'N/A'}</p>`;
+            detailDiv.innerHTML += `<p><b>Hình thức thanh toán:</b> ${hd.hinh_thuc_thanh_toan || 'N/A'}</p>`;
+
+            // --- Thông tin Nhân viên lập hóa đơn ---
+            if (hd.nhan_vien) {
+                detailDiv.innerHTML += `<h3 class="text-xl font-semibold mt-6 mb-3 text-blue-700 border-t pt-3">Thông tin Nhân viên</h3>`;
+                detailDiv.innerHTML += `<p><b>Tên nhân viên:</b> ${hd.nhan_vien.ten_nv || 'N/A'}</p>`;
+                // Bạn có thể thêm các trường khác của nhân viên nếu API trả về (ví dụ: ma_nv, chuc_vu)
+                // detailDiv.innerHTML += `<p><b>Mã nhân viên:</b> ${hd.nhan_vien.ma_nv || 'N/A'}</p>`;
+                // detailDiv.innerHTML += `<p><b>Chức vụ:</b> ${hd.nhan_vien.chuc_vu || 'N/A'}</p>`;
+            } else {
+                detailDiv.innerHTML += `<h3 class="text-xl font-semibold mt-6 mb-3 text-blue-700 border-t pt-3">Thông tin Nhân viên</h3>`;
+                detailDiv.innerHTML += `<p class="ml-4">Không có thông tin nhân viên.</p>`;
+            }
+
+            // --- Thông tin Khách hàng (Người đặt) ---
+            if (hd.khach_hang) {
+                detailDiv.innerHTML += `<h3 class="text-xl font-semibold mt-6 mb-3 text-blue-700 border-t pt-3">Thông tin Khách hàng</h3>`;
+                detailDiv.innerHTML += `<p><b>Tên KH:</b> ${hd.khach_hang.ten_kh || 'N/A'}</p>`;
+                detailDiv.innerHTML += `<p><b>SĐT:</b> ${hd.khach_hang.sdt || 'N/A'}</p>`;
+                // Mở rộng thêm các thông tin khách hàng nếu có trong JSON (ví dụ: cmnd, ngay_sinh, dia_chi, gioi_tinh, quoc_tich)
+                detailDiv.innerHTML += `<p><b>CCCD:</b> ${hd.khach_hang.cmnd || 'N/A'}</p>`;
+                detailDiv.innerHTML += `<p><b>Ngày sinh:</b> ${hd.khach_hang.ngay_sinh ? new Date(hd.khach_hang.ngay_sinh).toLocaleDateString('vi-VN') : 'N/A'}</p>`;
+                detailDiv.innerHTML += `<p><b>Địa chỉ:</b> ${hd.khach_hang.dia_chi || 'N/A'}</p>`;
+                detailDiv.innerHTML += `<p><b>Giới tính:</b> ${hd.khach_hang.gioi_tinh || 'N/A'}</p>`;
+                detailDiv.innerHTML += `<p><b>Quốc tịch:</b> ${hd.khach_hang.quoc_tich || 'N/A'}</p>`;
+            } else {
+                detailDiv.innerHTML += `<h3 class="text-xl font-semibold mt-6 mb-3 text-blue-700 border-t pt-3">Thông tin Khách hàng</h3>`;
+                detailDiv.innerHTML += `<p class="ml-4">Không có thông tin khách hàng.</p>`;
+            }
+
+            // --- Thông tin Thời gian đặt phòng ---
+            if (hd.thoi_gian) {
+                detailDiv.innerHTML += `<h3 class="text-xl font-semibold mt-6 mb-3 text-blue-700 border-t pt-3">Thời gian đặt phòng</h3>`;
+                detailDiv.innerHTML += `<p><b>Ngày nhận phòng:</b> ${hd.thoi_gian.ngay_nhan ? new Date(hd.thoi_gian.ngay_nhan).toLocaleDateString('vi-VN') : 'N/A'}</p>`;
+                detailDiv.innerHTML += `<p><b>Ngày trả phòng:</b> ${hd.thoi_gian.ngay_tra ? new Date(hd.thoi_gian.ngay_tra).toLocaleDateString('vi-VN') : 'N/A'}</p>`;
+                detailDiv.innerHTML += `<p><b>Số đêm:</b> ${hd.thoi_gian.so_dem || 'N/A'}</p>`;
+            } else {
+                detailDiv.innerHTML += `<h3 class="text-xl font-semibold mt-6 mb-3 text-blue-700 border-t pt-3">Thời gian đặt phòng</h3>`;
+                detailDiv.innerHTML += `<p class="ml-4">Không có thông tin thời gian đặt phòng.</p>`;
+            }
+
+
+            // --- Thông tin Phòng đã đặt ---
+            if (hd.phong_da_dat && hd.phong_da_dat.length > 0) {
+                detailDiv.innerHTML += `<h3 class="text-xl font-semibold mt-6 mb-3 text-blue-700 border-t pt-3">Phòng đã đặt</h3>`;
+                hd.phong_da_dat.forEach((phong, index) => {
+                    const phongGia = parseFloat(phong.gia || 0);
+                    // Giả định so_dem lấy từ booking chung, không phải của từng phòng riêng
+                    const soDem = hd.thoi_gian ? hd.thoi_gian.so_dem : 0;
+                    const tongTienPhong = phongGia * soDem;
+
+                    detailDiv.innerHTML += `
+                        <div class="ml-4 border-b pb-2 mb-2 last:border-b-0 last:pb-0">
+                            <p><b>Phòng ${index + 1}:</b> ${phong.so_phong || 'N/A'}</p>
+                            <p class="ml-4">- Loại phòng: ${phong.loai_phong || 'N/A'}</p>
+                            <p class="ml-4">- Giá/đêm: ${phongGia.toLocaleString('vi-VN')} đ</p>
+                            <p class="ml-4">- Tổng tiền phòng: <b>${tongTienPhong.toLocaleString('vi-VN')} đ</b> (${soDem} đêm)</p>
+                        </div>
+                    `;
+                });
+            } else {
+                detailDiv.innerHTML += `<h3 class="text-xl font-semibold mt-6 mb-3 text-blue-700 border-t pt-3">Phòng đã đặt</h3>`;
+                detailDiv.innerHTML += `<p class="ml-4">Không có thông tin phòng đã đặt.</p>`;
+            }
+
+
+            // --- Thông tin Dịch vụ đã dùng ---
+            if (hd.dich_vu_da_dung && hd.dich_vu_da_dung.length > 0) {
+                detailDiv.innerHTML += `<h3 class="text-xl font-semibold mt-6 mb-3 text-blue-700 border-t pt-3">Dịch vụ đã dùng</h3>`;
+                hd.dich_vu_da_dung.forEach((dv, index) => {
+                    const dvDonGia = parseFloat(dv.don_gia || 0);
+                    const dvSoLuong = parseInt(dv.so_luong || 0);
+                    const tongTienDv = dvDonGia * dvSoLuong;
+
+                    detailDiv.innerHTML += `
+                        <div class="ml-4 border-b pb-2 mb-2 last:border-b-0 last:pb-0">
+                            <p><b>Dịch vụ ${index + 1}:</b> ${dv.ten_dv || 'N/A'}</p>
+                            <p class="ml-4">- Số lượng: ${dvSoLuong}</p>
+                            <p class="ml-4">- Đơn giá: ${dvDonGia.toLocaleString('vi-VN')} đ</p>
+                            <p class="ml-4">- Thành tiền: <b>${tongTienDv.toLocaleString('vi-VN')} đ</b></p>
+                        </div>
+                    `;
+                });
+            } else {
+                detailDiv.innerHTML += `<h3 class="text-xl font-semibold mt-6 mb-3 text-blue-700 border-t pt-3">Dịch vụ đã dùng</h3>`;
+                detailDiv.innerHTML += `<p class="ml-4">Không có thông tin dịch vụ đã sử dụng.</p>`;
+            }
+
+            openPopup('detailPopup');
+        }
+
+        /**
+         * Điền dữ liệu vào form chỉnh sửa và mở popup.
+         * @param {string} ma_hd - Mã hóa đơn.
+         * @param {object} hd - Đối tượng hóa đơn để lấy dữ liệu.
+         */
+        function editInvoice(ma_hd, hd) {
+            document.getElementById("edit_ma_hd").value = ma_hd;
+            document.getElementById("edit_ma_phieu").value = hd.ma_phieu || '';
+
+            // Định dạng ngày cho input type="date"
+            if (hd.ngay_lap) {
+                document.getElementById("edit_ngay_lap").value = new Date(hd.ngay_lap).toISOString().split('T')[0];
+            } else {
+                document.getElementById("edit_ngay_lap").value = '';
+            }
+
+            document.getElementById("edit_tong_tien").value = hd.tong_tien || 0;
+            openPopup('editPopup');
+        }
+
+        /**
+         * Lắng nghe sự kiện submit của form chỉnh sửa hóa đơn.
+         */
+        document.getElementById("editForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const ma_hd = document.getElementById("edit_ma_hd").value;
+            const ngay_lap = document.getElementById("edit_ngay_lap").value;
+            const tong_tien = Number(document.getElementById("edit_tong_tien").value);
+
+            // Kiểm tra đầu vào cơ bản
+            if (!ngay_lap || isNaN(tong_tien) || tong_tien < 0) {
+                alert('Vui lòng nhập ngày lập hợp lệ và tổng tiền là số dương.');
+                return;
+            }
+
+            const body = {
+                ngay_lap: ngay_lap,
+                tong_tien: tong_tien
+            };
+
+            try {
+                const res = await fetch(`/api/hoadon/${ma_hd}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) {
+                    const errorDetails = await res.text();
+                    throw new Error(`Lỗi HTTP! Trạng thái: ${res.status}, Chi tiết: ${errorDetails}`);
+                }
+                alert('Cập nhật hóa đơn thành công!');
+                closePopup('editPopup');
+                fetchAndRender(); // Tải lại dữ liệu sau khi cập nhật
+            } catch (error) {
+                console.error("Lỗi khi cập nhật hóa đơn:", error);
+                alert(`Cập nhật hóa đơn thất bại: ${error.message}`);
+            }
+        });
+
+        // Lắng nghe sự kiện nhập liệu trên ô tìm kiếm để render lại bảng
+        document.getElementById("searchInput").addEventListener("input", renderInvoices);
+
+        // Tải hóa đơn khi trang được tải hoàn toàn
+        document.addEventListener('DOMContentLoaded', fetchAndRender);
+    </script>
+</body>
+</html>

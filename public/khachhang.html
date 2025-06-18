@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quản lý Khách hàng</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+  <!-- Tiêu đề + Thanh điều hướng -->
+  <header class="bg-blue-600 text-white p-6 shadow">
+    <h1 class="text-3xl font-bold text-center">Hệ thống Quản lý Khách sạn</h1>
+  </header>
+  <nav class="bg-white shadow flex justify-center gap-6 py-4 text-blue-700 font-medium text-lg">
+    <a href="index.html" class="hover:underline">Trang chính</a>
+    <a href="khachhang.html" class="underline text-blue-900 font-semibold">Khách hàng</a>
+    <a href="phong.html" class="hover:underline">Phòng</a>
+    <a href="dichvu.html" class="hover:underline">Dịch vụ</a>
+    <a href="hoadon.html" class="hover:underline">Hóa đơn</a>
+    <a href="datphong.html" class="hover:underline">Đặt phòng</a>
+  </nav>
+
+  <!-- Nội dung chính -->
+  <main class="p-6 max-w-6xl mx-auto space-y-6">
+
+    <!-- Thanh tìm kiếm và nút Thêm -->
+    <div class="flex gap-3">
+      <input type="text" id="search" placeholder="Tìm theo tên hoặc SĐT..." class="w-1/2 border px-3 py-2 rounded" />
+      <button onclick="loadKhachHang()" class="bg-blue-600 text-white px-4 py-2 rounded">Tìm</button>
+      <button onclick="openForm()" class="ml-auto bg-green-600 text-white px-4 py-2 rounded">+ Thêm khách hàng</button>
+    </div>
+
+    <!-- Bảng danh sách khách hàng -->
+    <div class="overflow-auto bg-white rounded shadow">
+      <table class="min-w-full text-sm text-left">
+        <thead class="bg-gray-200 text-gray-700">
+          <tr>
+            <th class="p-3">Mã KH</th>
+            <th class="p-3">Tên</th>
+            <th class="p-3">SĐT</th>
+            <th class="p-3">Email</th>
+            <th class="p-3">Giới tính</th>
+            <th class="p-3">Hành động</th>
+          </tr>
+        </thead>
+        <tbody id="khTable" class="divide-y"></tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <!-- Form popup thêm/sửa -->
+  <div id="formPopup" class="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center hidden">
+    <div class="bg-white p-6 rounded shadow max-w-md w-full">
+      <h2 class="text-xl font-semibold mb-4" id="formTitle">Thêm khách hàng</h2>
+      <form id="khForm" class="space-y-3">
+        <input type="hidden" id="ma_kh" />
+        <input id="ten_kh" placeholder="Tên khách hàng" required class="w-full border px-3 py-2 rounded" />
+        <input id="sdt" placeholder="Số điện thoại" required class="w-full border px-3 py-2 rounded" />
+        <input id="email" placeholder="Email" class="w-full border px-3 py-2 rounded" />
+        <input id="cmnd" placeholder="CMND/CCCD" class="w-full border px-3 py-2 rounded" />
+        <input id="dia_chi" placeholder="Địa chỉ" class="w-full border px-3 py-2 rounded" />
+        <input id="ngay_sinh" type="date" class="w-full border px-3 py-2 rounded" />
+        <select id="gioi_tinh" class="w-full border px-3 py-2 rounded">
+          <option value="nam">Nam</option>
+          <option value="nu">Nữ</option>
+          <option value="khac">Khác</option>
+        </select>
+        <input id="quoc_tich" placeholder="Quốc tịch" class="w-full border px-3 py-2 rounded" />
+        <div class="flex justify-end gap-2 mt-3">
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Lưu</button>
+          <button type="button" onclick="closeForm()" class="bg-gray-400 text-white px-4 py-2 rounded">Hủy</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Chi tiết khách hàng -->
+  <div id="detailPopup" class="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center hidden">
+    <div class="bg-white p-6 rounded shadow max-w-md w-full">
+      <h2 class="text-xl font-semibold mb-4">Chi tiết khách hàng</h2>
+      <div id="detailContent" class="text-sm space-y-1"></div>
+      <div class="text-right mt-4">
+        <button onclick="closeDetail()" class="bg-blue-600 text-white px-4 py-2 rounded">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script xử lý -->
+  <script>
+    async function loadKhachHang() {
+      const search = document.getElementById("search").value;
+      const res = await fetch('/api/khachhang?search=' + encodeURIComponent(search));
+      const data = await res.json();
+      const tbody = document.getElementById("khTable");
+      tbody.innerHTML = "";
+      data.forEach(kh => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="p-2">${kh.ma_kh}</td>
+          <td class="p-2">${kh.ten_kh}</td>
+          <td class="p-2">${kh.sdt}</td>
+          <td class="p-2">${kh.email || ''}</td>
+          <td class="p-2">${kh.gioi_tinh}</td>
+          <td class="p-2 flex gap-2">
+            <button onclick='viewKh(${JSON.stringify(kh)})' class="text-blue-600 hover:underline">👁 Xem</button>
+            <button onclick='editKh(${JSON.stringify(kh)})' class="text-yellow-600 hover:underline">✏ Sửa</button>
+            <button onclick='delKh("${kh.ma_kh}")' class="text-red-600 hover:underline">🗑 Xoá</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openForm() {
+      document.getElementById("formPopup").classList.remove("hidden");
+      document.getElementById("khForm").reset();
+      document.getElementById("ma_kh").value = "";
+      document.getElementById("formTitle").innerText = "Thêm khách hàng";
+    }
+
+    function closeForm() {
+      document.getElementById("formPopup").classList.add("hidden");
+    }
+
+    function editKh(kh) {
+      openForm();
+      for (let key in kh) {
+        if (document.getElementById(key)) {
+          document.getElementById(key).value = kh[key];
+        }
+      }
+      document.getElementById("formTitle").innerText = "Sửa khách hàng";
+    }
+
+    function viewKh(kh) {
+      const div = document.getElementById("detailContent");
+      div.innerHTML = `
+        <div><strong>Mã KH:</strong> ${kh.ma_kh}</div>
+        <div><strong>Họ tên:</strong> ${kh.ten_kh}</div>
+        <div><strong>SĐT:</strong> ${kh.sdt}</div>
+        <div><strong>Email:</strong> ${kh.email || ''}</div>
+        <div><strong>CMND:</strong> ${kh.cmnd || ''}</div>
+        <div><strong>Giới tính:</strong> ${kh.gioi_tinh}</div>
+        <div><strong>Ngày sinh:</strong> ${kh.ngay_sinh || ''}</div>
+        <div><strong>Quốc tịch:</strong> ${kh.quoc_tich || ''}</div>
+        <div><strong>Địa chỉ:</strong> ${kh.dia_chi || ''}</div>
+      `;
+      document.getElementById("detailPopup").classList.remove("hidden");
+    }
+
+    function closeDetail() {
+      document.getElementById("detailPopup").classList.add("hidden");
+    }
+
+    async function delKh(ma_kh) {
+      if (confirm("Bạn chắc chắn muốn xoá khách hàng này?")) {
+        await fetch('/api/khachhang/' + ma_kh, { method: 'DELETE' });
+        loadKhachHang();
+      }
+    }
+
+    document.getElementById("khForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const body = {};
+      ["ma_kh", "ten_kh", "sdt", "email", "cmnd", "dia_chi", "ngay_sinh", "gioi_tinh", "quoc_tich"].forEach(id => {
+        body[id] = document.getElementById(id).value || null;
+      });
+
+      const method = body.ma_kh ? 'PUT' : 'POST';
+      const url = body.ma_kh ? '/api/khachhang/' + body.ma_kh : '/api/khachhang';
+
+      await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      closeForm();
+      loadKhachHang();
+    });
+
+    // Khởi động
+    loadKhachHang();
+  </script>
+
+</body>
+</html>

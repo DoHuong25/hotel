@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Quản lý Phòng</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+
+  <!-- Header -->
+  <header class="bg-blue-600 text-white py-6 text-center">
+    <h1 class="text-3xl font-bold">Hệ thống Quản lý Khách sạn</h1>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="bg-white shadow flex justify-center gap-6 py-4 text-blue-700 font-semibold">
+    <a href="index.html">Trang chính</a>
+    <a href="khachhang.html">Khách hàng</a>
+    <a href="phong.html" class="underline text-blue-900">Phòng</a>
+    <a href="dichvu.html">Dịch vụ</a>
+    <a href="hoadon.html">Hóa đơn</a>
+    <a href="datphong.html">Đặt phòng</a>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="p-6 max-w-6xl mx-auto">
+
+    <!-- Tìm kiếm và Thêm -->
+    <div class="flex gap-2 mb-4">
+      <input type="text" id="search" placeholder="Tìm kiếm số phòng..." class="border p-2 rounded w-full">
+      <button onclick="loadPhong()" class="bg-blue-600 text-white px-4 py-2 rounded">Tìm</button>
+      <button onclick="openForm()" class="bg-green-600 text-white px-4 py-2 rounded">+ Thêm phòng</button>
+    </div>
+
+    <!-- Bảng danh sách -->
+    <div class="overflow-auto bg-white shadow rounded">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-200 text-gray-700">
+          <tr>
+            <th class="p-2">Mã</th>
+            <th>Số</th>
+            <th>Loại</th>
+            <th>Giường</th>
+            <th>Giá</th>
+            <th>Trạng thái</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody id="phongTable"></tbody>
+      </table>
+    </div>
+
+    <!-- Form Thêm/Sửa -->
+    <div id="formPopup" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden">
+      <div class="bg-white p-6 rounded w-full max-w-md">
+        <h2 class="text-xl font-semibold mb-4" id="formTitle">Thêm Phòng</h2>
+        <form id="phongForm" class="space-y-3">
+          <input type="hidden" id="ma_phong" />
+          <input id="so_phong" placeholder="Số phòng" required class="w-full border px-3 py-2 rounded" />
+          <input id="loai_phong" placeholder="Loại phòng" class="w-full border px-3 py-2 rounded" />
+          <input id="loai_giuong" placeholder="Loại giường" class="w-full border px-3 py-2 rounded" />
+          <input id="gia" placeholder="Giá" type="number" class="w-full border px-3 py-2 rounded" />
+          <select id="trang_thai" class="w-full border px-3 py-2 rounded">
+            <option value="Trong">Trong</option>
+            <option value="Dang_o">Đang ở</option>
+            <option value="Da_dat">Đã đặt</option>
+            <option value="Bao_tri">Bảo trì</option>
+          </select>
+          <div class="flex justify-end gap-2">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Lưu</button>
+            <button type="button" onclick="closeForm()" class="bg-gray-500 text-white px-4 py-2 rounded">Hủy</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Xem chi tiết -->
+    <div id="detailPopup" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden">
+      <div class="bg-white p-6 rounded max-w-md w-full">
+        <h2 class="text-xl font-bold mb-4">Chi tiết Phòng</h2>
+        <div id="detailContent" class="space-y-2 text-sm"></div>
+        <div class="text-right mt-4">
+          <button onclick="closeDetail()" class="bg-blue-600 text-white px-4 py-2 rounded">Đóng</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    async function loadPhong() {
+      const search = document.getElementById("search").value;
+      const res = await fetch('/api/phong?search=' + encodeURIComponent(search));
+      const data = await res.json();
+      const tbody = document.getElementById("phongTable");
+      tbody.innerHTML = "";
+      data.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.className = "border-t";
+        tr.innerHTML = `
+          <td class="p-2">${p.ma_phong}</td>
+          <td class="p-2">${p.so_phong}</td>
+          <td class="p-2">${p.loai_phong}</td>
+          <td class="p-2">${p.loai_giuong}</td>
+          <td class="p-2">${parseFloat(p.gia).toLocaleString('vi-VN')} đ</td>
+          <td class="p-2">${p.trang_thai}</td>
+          <td class="p-2 space-x-2">
+            <button onclick='viewPhong(${JSON.stringify(p)})' class="text-blue-600 hover:underline">👁</button>
+            <button onclick='editPhong(${JSON.stringify(p)})' class="text-yellow-600 hover:underline">✏</button>
+            <button onclick='delPhong("${p.ma_phong}")' class="text-red-600 hover:underline">🗑</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openForm() {
+      document.getElementById("phongForm").reset();
+      document.getElementById("ma_phong").value = "";
+      document.getElementById("formTitle").innerText = "Thêm Phòng";
+      document.getElementById("formPopup").classList.remove("hidden");
+    }
+
+    function closeForm() {
+      document.getElementById("formPopup").classList.add("hidden");
+    }
+
+    function editPhong(p) {
+      openForm();
+      for (let key in p) {
+        if (document.getElementById(key)) {
+          document.getElementById(key).value = p[key];
+        }
+      }
+      document.getElementById("formTitle").innerText = "Sửa Phòng";
+    }
+
+    function viewPhong(p) {
+      const d = document.getElementById("detailContent");
+      d.innerHTML = `
+        <p><b>Mã:</b> ${p.ma_phong}</p>
+        <p><b>Số phòng:</b> ${p.so_phong}</p>
+        <p><b>Loại:</b> ${p.loai_phong}</p>
+        <p><b>Giường:</b> ${p.loai_giuong}</p>
+        <p><b>Giá:</b> ${parseFloat(p.gia).toLocaleString('vi-VN')} đ</p>
+        <p><b>Trạng thái:</b> ${p.trang_thai}</p>
+      `;
+      document.getElementById("detailPopup").classList.remove("hidden");
+    }
+
+    function closeDetail() {
+      document.getElementById("detailPopup").classList.add("hidden");
+    }
+
+    async function delPhong(ma) {
+      if (confirm("Bạn có chắc chắn muốn xoá?")) {
+        await fetch('/api/phong/' + ma, { method: 'DELETE' });
+        loadPhong();
+      }
+    }
+
+    document.getElementById("phongForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const body = {};
+      ["ma_phong", "so_phong", "loai_phong", "loai_giuong", "gia", "trang_thai"].forEach(id => {
+        body[id] = document.getElementById(id).value || null;
+      });
+
+      const method = body.ma_phong ? 'PUT' : 'POST';
+      const url = body.ma_phong ? '/api/phong/' + body.ma_phong : '/api/phong';
+
+      await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      closeForm();
+      loadPhong();
+    });
+
+    loadPhong();
+  </script>
+
+</body>
+</html>

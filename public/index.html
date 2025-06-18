@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trang chính - Quản lý Khách sạn</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+
+  <!-- Header -->
+  <header class="bg-blue-600 text-white p-6 shadow">
+    <h1 class="text-3xl font-bold text-center">Hệ thống Quản lý Khách sạn</h1>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="bg-white shadow flex justify-center gap-6 text-blue-700 font-semibold py-4">
+    <a href="index.html" class="underline text-blue-900">Trang chính</a>
+    <a href="khachhang.html">Khách hàng</a>
+    <a href="phong.html">Phòng</a>
+    <a href="dichvu.html">Dịch vụ</a>
+    <a href="hoadon.html">Hóa đơn</a>
+    <a href="datphong.html">Đặt phòng</a>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="p-6 max-w-6xl mx-auto space-y-8">
+
+    <!-- Thống kê tổng quan -->
+    <section>
+      <h2 class="text-xl font-semibold mb-4">📊 Thống kê tổng quan</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded shadow text-center">
+          <p class="text-gray-600">Tổng số phòng</p>
+          <h3 id="totalRooms" class="text-3xl font-bold text-blue-700">0</h3>
+        </div>
+        <div class="bg-white p-6 rounded shadow text-center">
+          <p class="text-gray-600">Phòng đang thuê</p>
+          <h3 id="rentedRooms" class="text-3xl font-bold text-green-600">0</h3>
+        </div>
+        <div class="bg-white p-6 rounded shadow text-center">
+          <p class="text-gray-600">Phòng trống</p>
+          <h3 id="availableRooms" class="text-3xl font-bold text-yellow-600">0</h3>
+        </div>
+        <div class="bg-white p-6 rounded shadow text-center">
+          <p class="text-gray-600">Tổng khách hàng</p>
+          <h3 id="totalCustomers" class="text-3xl font-bold text-indigo-600">0</h3>
+        </div>
+        <div class="bg-white p-6 rounded shadow text-center">
+          <p class="text-gray-600">Tổng hóa đơn</p>
+          <h3 id="totalInvoices" class="text-3xl font-bold text-purple-600">0</h3>
+        </div>
+        <div class="bg-white p-6 rounded shadow text-center">
+          <p class="text-gray-600">Tổng dịch vụ</p>
+          <h3 id="totalServices" class="text-3xl font-bold text-pink-600">0</h3>
+        </div>
+      </div>
+    </section>
+
+    <!-- Thống kê doanh thu -->
+    <section>
+      <h2 class="text-xl font-semibold mb-4">💰 Doanh thu</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded shadow text-center">
+          <p class="text-gray-600">Doanh thu hôm nay</p>
+          <h3 id="revenueToday" class="text-3xl font-bold text-red-500">0 đ</h3>
+        </div>
+        <div class="bg-white p-6 rounded shadow text-center">
+          <p class="text-gray-600">Doanh thu tháng này</p>
+          <h3 id="revenueMonth" class="text-3xl font-bold text-green-500">0 đ</h3>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    async function fetchStats() {
+      try {
+        const [phongRes, khRes, hdRes, dvRes] = await Promise.all([
+          fetch('/api/phong'),
+          fetch('/api/khachhang'),
+          fetch('/api/hoadon'),
+          fetch('/api/dichvu')
+        ]);
+
+        const phong = await phongRes.json();
+        const khachhang = await khRes.json();
+        const hoadon = await hdRes.json();
+        const dichvu = await dvRes.json();
+
+        // Tổng số phòng
+        document.getElementById('totalRooms').innerText = phong.length;
+        document.getElementById('rentedRooms').innerText = phong.filter(p => p.trang_thai === 'Dang_o' || p.trang_thai === 'Da_dat').length;
+        document.getElementById('availableRooms').innerText = phong.filter(p => p.trang_thai === 'Trong').length;
+
+        // Tổng KH, HĐ, DV
+        document.getElementById('totalCustomers').innerText = khachhang.length;
+        document.getElementById('totalInvoices').innerText = hoadon.length;
+        document.getElementById('totalServices').innerText = dichvu.length;
+
+        // Thống kê doanh thu hôm nay / tháng
+        const today = new Date().toISOString().slice(0, 10);
+        const currentMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+
+        const todayRevenue = hoadon
+          .filter(h => h.ngay_lap === today && h.trang_thai_thanh_toan === 'da_thanh_toan')
+          .reduce((sum, h) => sum + parseFloat(h.tong_tien), 0);
+
+        const monthRevenue = hoadon
+          .filter(h => h.ngay_lap.startsWith(currentMonth) && h.trang_thai_thanh_toan === 'da_thanh_toan')
+          .reduce((sum, h) => sum + parseFloat(h.tong_tien), 0);
+
+        document.getElementById('revenueToday').innerText = todayRevenue.toLocaleString('vi-VN') + ' đ';
+        document.getElementById('revenueMonth').innerText = monthRevenue.toLocaleString('vi-VN') + ' đ';
+
+      } catch (err) {
+        console.error('Lỗi khi lấy thống kê:', err);
+      }
+    }
+
+    fetchStats();
+  </script>
+
+</body>
+</html>

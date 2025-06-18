@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <title>Đặt Phòng</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Tùy chỉnh nhỏ cho sidebar nếu cần, hoặc để Tailwind tự xử lý */
+        .sidebar ul li a.active {
+            color: #1d4ed8; /* blue-700 */
+            text-decoration: underline;
+            font-weight: bold;
+        }
+        /* Ẩn các nút mũi tên trên input number */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <header class="bg-blue-600 text-white py-6 text-center shadow">
+        <h1 class="text-3xl font-bold">Hệ thống Quản lý Khách sạn</h1>
+    </header>
+
+    <nav class="bg-white shadow flex justify-center gap-6 py-4 text-blue-700 font-semibold">
+        <a href="index.html" class="hover:text-blue-900">Trang chính</a>
+        <a href="khachhang.html" class="hover:text-blue-900">Khách hàng</a>
+        <a href="phong.html" class="hover:text-blue-900">Phòng</a>
+        <a href="dichvu.html" class="hover:text-blue-900">Dịch vụ</a>
+        <a href="datphong.html" class="underline text-blue-900">Đặt phòng</a>
+        <a href="hoadon.html" class="hover:text-blue-900">Hóa đơn</a>
+    </nav>
+
+    <main class="p-6 max-w-6xl mx-auto space-y-6">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Phiếu đặt phòng</h2>
+
+        <div class="bg-white p-6 rounded-lg shadow space-y-4">
+            <h3 class="text-lg font-semibold text-gray-700">Thông tin khách hàng</h3>
+            <div class="flex items-center space-x-4">
+                <label class="inline-flex items-center">
+                    <input type="radio" name="khOption" value="cu" checked class="form-radio text-blue-600 h-4 w-4" />
+                    <span class="ml-2 text-gray-700">Khách hàng cũ</span>
+                </label>
+                <label class="inline-flex items-center">
+                    <input type="radio" name="khOption" value="moi" class="form-radio text-blue-600 h-4 w-4" />
+                    <span class="ml-2 text-gray-700">Khách hàng mới</span>
+                </label>
+            </div>
+
+            <div id="khachHangCu" class="space-y-3">
+                <input type="text" id="searchKH" placeholder="Tìm theo tên hoặc SĐT khách hàng cũ..." class="border border-gray-300 px-3 py-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <select id="khachCuSelect" class="border border-gray-300 px-3 py-2 rounded-md w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">-- Đang tải khách hàng --</option>
+                </select>
+            </div>
+
+            <div id="khachHangMoi" class="space-y-3 hidden">
+                <input type="text" id="tenKH" placeholder="Tên khách hàng" required class="border border-gray-300 px-3 py-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="text" id="sdtKH" placeholder="SĐT (10 số)" pattern="[0-9]{10}" title="Số điện thoại phải có 10 chữ số" required class="border border-gray-300 px-3 py-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="text" id="cmndKH" placeholder="CCCD (12 số)" pattern="[0-9]{12}" title="CCCD phải có 12 chữ số" required class="border border-gray-300 px-3 py-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label for="ngaySinhKH" class="text-gray-700">Ngày sinh:</label>
+                <input type="date" id="ngaySinhKH" required class="border border-gray-300 px-3 py-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="text" id="diaChiKH" placeholder="Địa chỉ" class="border border-gray-300 px-3 py-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <select id="gioiTinhKH" class="border border-gray-300 px-3 py-2 rounded-md w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">-- Chọn giới tính --</option>
+                    <option value="Nam">Nam</option>
+                    <option value="Nữ">Nữ</option>
+                    <option value="Khác">Khác</option>
+                </select>
+                <input type="text" id="quocTichKH" placeholder="Quốc tịch" class="border border-gray-300 px-3 py-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow space-y-4">
+            <h3 class="text-lg font-semibold text-gray-700">Thông tin phòng và thời gian</h3>
+            <div>
+                <label for="phongSelect" class="block text-gray-700 text-sm font-bold mb-2">Chọn phòng trống:</label>
+                <select id="phongSelect" class="border border-gray-300 px-3 py-2 rounded-md w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">-- Đang tải phòng trống --</option>
+                </select>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="ngayDat" class="block text-gray-700 text-sm font-bold mb-2">Ngày đặt:</label>
+                    <input type="date" id="ngayDat" required class="border border-gray-300 px-3 py-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label for="ngayNhan" class="block text-gray-700 text-sm font-bold mb-2">Ngày nhận phòng:</label>
+                    <input type="date" id="ngayNhan" required class="border border-gray-300 px-3 py-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label for="ngayTra" class="block text-gray-700 text-sm font-bold mb-2">Ngày trả phòng:</label>
+                    <input type="date" id="ngayTra" required class="border border-gray-300 px-3 py-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow space-y-4">
+            <h3 class="text-lg font-semibold text-gray-700">Chọn dịch vụ đi kèm</h3>
+            <div id="dichVuContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <p class="text-gray-500">Đang tải dịch vụ...</p>
+            </div>
+        </div>
+        
+        <div class="text-center">
+            <button onclick="datPhong()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75">
+                Xác nhận đặt phòng
+            </button>
+        </div>
+    </main>
+
+    <script>
+        // Global variables to store fetched data
+        let allCustomers = [];
+        let allServices = [];
+
+        // --- Event Listeners for UI interaction ---
+        document.querySelectorAll('input[name="khOption"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const isNewCustomer = document.querySelector('input[name="khOption"]:checked').value === 'moi';
+                document.getElementById('khachHangCu').classList.toggle('hidden', isNewCustomer);
+                document.getElementById('khachHangMoi').classList.toggle('hidden', !isNewCustomer);
+
+                // Reset new customer form when switching back to old customer
+                if (!isNewCustomer) {
+                    document.getElementById('khachHangMoi').querySelectorAll('input, select, textarea').forEach(input => input.value = '');
+                }
+            });
+        });
+
+        document.getElementById('searchKH').addEventListener('input', function () {
+            const keyword = this.value.toLowerCase();
+            const filtered = allCustomers.filter(kh => 
+                kh.ten_kh.toLowerCase().includes(keyword) || (kh.sdt && kh.sdt.includes(keyword))
+            );
+            renderCustomerSelect(filtered);
+        });
+
+        // --- Fetching Data from APIs ---
+
+        /**
+         * Loads existing customers from API and renders them to the select dropdown.
+         */
+        async function loadOldCustomers() {
+            try {
+                const selectElement = document.getElementById('khachCuSelect');
+                selectElement.innerHTML = '<option value="">-- Đang tải khách hàng --</option>'; // Show loading state
+
+                const res = await fetch('/api/khachhang', { cache: 'no-cache' });
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    throw new Error(`HTTP error! status: ${res.status}, body: ${errorText}`);
+                }
+                allCustomers = await res.json();
+                renderCustomerSelect(allCustomers);
+            } catch (error) {
+                console.error("Lỗi tải danh sách khách hàng:", error);
+                document.getElementById('khachCuSelect').innerHTML = '<option value="">Lỗi tải khách hàng</option>';
+                alert(`Lỗi khi tải danh sách khách hàng: ${error.message}. Vui lòng kiểm tra console.`);
+            }
+        }
+
+        /**
+         * Renders the provided list of customers into the old customer select dropdown.
+         * @param {Array} customersList - The list of customer objects to render.
+         */
+        function renderCustomerSelect(customersList) {
+            const selectElement = document.getElementById('khachCuSelect');
+            selectElement.innerHTML = '<option value="">-- Chọn khách hàng cũ --</option>'; // Reset options
+
+            if (customersList.length === 0) {
+                selectElement.innerHTML += '<option value="">Không tìm thấy khách hàng</option>';
+                return;
+            }
+
+            customersList.forEach(kh => {
+                const option = document.createElement('option');
+                option.value = kh.ma_kh;
+                option.textContent = `${kh.ten_kh} - ${kh.sdt || 'Không có SĐT'}`;
+                selectElement.appendChild(option);
+            });
+        }
+
+        /**
+         * Loads available rooms from API and renders them to the select dropdown.
+         */
+        async function loadAvailableRooms() {
+            try {
+                const selectElement = document.getElementById('phongSelect');
+                selectElement.innerHTML = '<option value="">-- Đang tải phòng trống --</option>'; // Show loading state
+
+                const res = await fetch('/api/phong', { cache: 'no-cache' });
+                if (!res.ok) {
+                    // Try to read error message from response body
+                    const errorText = await res.text();
+                    throw new Error(`HTTP error! status: ${res.status}, body: ${errorText}`);
+                }
+                const rooms = await res.json();
+                console.log("Dữ liệu phòng từ API:", rooms); // Log để kiểm tra dữ liệu trả về
+
+                const availableRooms = rooms.filter(p => p.trang_thai === 'Trong');
+                console.log("Phòng trống sau khi lọc ('Trong'):", availableRooms); // Log để kiểm tra kết quả lọc
+                
+                selectElement.innerHTML = '<option value="">-- Chọn phòng trống --</option>'; // Reset before adding filtered rooms
+
+                if (availableRooms.length === 0) {
+                    selectElement.innerHTML = '<option value="">Không có phòng trống</option>';
+                    return;
+                }
+
+                availableRooms.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.ma_phong;
+                    // Đảm bảo p.gia_phong tồn tại và là số để định dạng
+                    const giaPhong = typeof p.gia_phong === 'number' ? p.gia_phong.toLocaleString('vi-VN') : 'N/A';
+                    option.textContent = `Phòng ${p.so_phong} - ${p.loai_phong} (${giaPhong} đ/đêm)`;
+                    selectElement.appendChild(option);
+                });
+            } catch (error) {
+                console.error("Lỗi tải danh sách phòng:", error);
+                document.getElementById('phongSelect').innerHTML = '<option value="">Lỗi tải phòng</option>';
+                alert(`Lỗi khi tải danh sách phòng: ${error.message}. Vui lòng kiểm tra console.`);
+            }
+        }
+
+        /**
+         * Loads services from API and renders them with checkboxes and quantity inputs.
+         */
+        async function loadServices() {
+            try {
+                const container = document.getElementById('dichVuContainer');
+                container.innerHTML = '<p class="text-gray-500">Đang tải dịch vụ...</p>'; // Show loading state
+
+                const res = await fetch('/api/dichvu', { cache: 'no-cache' });
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    throw new Error(`HTTP error! status: ${res.status}, body: ${errorText}`);
+                }
+                allServices = await res.json();
+                container.innerHTML = ''; // Clear loading message
+
+                if (allServices.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500">Không có dịch vụ nào.</p>';
+                    return;
+                }
+
+                allServices.forEach(dv => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center space-x-2 border p-3 rounded-md bg-gray-50';
+                    div.innerHTML = `
+                        <input type="checkbox" id="service_${dv.ma_dv}" value="${dv.ma_dv}" class="form-checkbox h-4 w-4 text-blue-600" />
+                        <label for="service_${dv.ma_dv}" class="flex-grow text-gray-800">${dv.ten_dv} <span class="text-gray-500 text-sm">(${dv.don_gia ? dv.don_gia.toLocaleString('vi-VN') : 'N/A'} đ)</span></label>
+                        <input type="number" min="1" value="1" data-id="${dv.ma_dv}" 
+                               class="border border-gray-300 px-2 py-1 rounded-md w-16 text-center text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" 
+                               onfocus="this.select()" />
+                    `;
+                    container.appendChild(div);
+                });
+            } catch (error) {
+                console.error("Lỗi tải danh sách dịch vụ:", error);
+                document.getElementById('dichVuContainer').innerHTML = '<p class="text-red-500">Lỗi tải dịch vụ.</p>';
+                alert(`Lỗi khi tải danh sách dịch vụ: ${error.message}. Vui lòng kiểm tra console.`);
+            }
+        }
+
+        // --- Main Booking Function ---
+
+        /**
+         * Handles the room booking process, including new customer creation and service assignment.
+         */
+        async function datPhong() {
+            const isNewCustomer = document.querySelector('input[name="khOption"]:checked').value === 'moi';
+            let customerId = '';
+
+            try {
+                // 1. Validate inputs
+                if (isNewCustomer) {
+                    const tenKH = document.getElementById('tenKH').value.trim();
+                    const sdtKH = document.getElementById('sdtKH').value.trim();
+                    const cmndKH = document.getElementById('cmndKH').value.trim();
+                    const ngaySinhKH = document.getElementById('ngaySinhKH').value;
+                    const gioiTinhKH = document.getElementById('gioiTinhKH').value;
+
+                    if (!tenKH || !sdtKH || !cmndKH || !ngaySinhKH || !gioiTinhKH) {
+                        alert('Vui lòng điền đầy đủ thông tin khách hàng mới (Tên, SĐT, CCCD, Ngày sinh, Giới tính).');
+                        return;
+                    }
+                    if (!/^\d{10}$/.test(sdtKH)) {
+                        alert('Số điện thoại phải có đúng 10 chữ số.');
+                        return;
+                    }
+                    if (!/^\d{12}$/.test(cmndKH)) {
+                        alert('CCCD phải có đúng 12 chữ số.');
+                        return;
+                    }
+                    if (new Date(ngaySinhKH) > new Date()) {
+                        alert('Ngày sinh không thể ở tương lai.');
+                        return;
+                    }
+
+                    const newCustomerPayload = {
+                        ten_kh: tenKH,
+                        sdt: sdtKH,
+                        cmnd: cmndKH,
+                        ngay_sinh: ngaySinhKH,
+                        dia_chi: document.getElementById('diaChiKH').value.trim(),
+                        gioi_tinh: gioiTinhKH,
+                        quoc_tich: document.getElementById('quocTichKH').value.trim()
+                    };
+
+                    const res = await fetch('/api/khachhang', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newCustomerPayload)
+                    });
+
+                    if (!res.ok) {
+                        const errorData = await res.json();
+                        throw new Error(`Lỗi khi tạo khách hàng mới: ${errorData.message || res.statusText}`);
+                    }
+                    const data = await res.json();
+                    customerId = data.ma_kh;
+                } else {
+                    customerId = document.getElementById('khachCuSelect').value;
+                    if (!customerId) {
+                        alert('Vui lòng chọn một khách hàng cũ.');
+                        return;
+                    }
+                }
+
+                const roomId = document.getElementById('phongSelect').value;
+                const checkinDate = document.getElementById('ngayNhan').value;
+                const checkoutDate = document.getElementById('ngayTra').value;
+                const bookingDate = document.getElementById('ngayDat').value;
+
+                if (!roomId || !checkinDate || !checkoutDate || !bookingDate) {
+                    alert('Vui lòng chọn phòng và điền đầy đủ ngày đặt, ngày nhận, ngày trả.');
+                    return;
+                }
+
+                // Date validation
+                const d_booking = new Date(bookingDate);
+                const d_checkin = new Date(checkinDate);
+                const d_checkout = new Date(checkoutDate);
+
+                if (d_booking > d_checkin) {
+                    alert('Ngày nhận phòng không thể trước ngày đặt phòng.');
+                    return;
+                }
+                if (d_checkin >= d_checkout) {
+                    alert('Ngày trả phòng phải sau ngày nhận phòng.');
+                    return;
+                }
+
+                // 2. Create Booking (DatPhong)
+                const bookingPayload = {
+                    ma_kh: customerId,
+                    ma_phong: roomId,
+                    ngay_dat: bookingDate,
+                    ngay_nhan: checkinDate,
+                    ngay_tra: checkoutDate
+                };
+
+                const bookingRes = await fetch('/api/datphong', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(bookingPayload)
+                });
+
+                if (!bookingRes.ok) {
+                    const errorData = await bookingRes.json();
+                    throw new Error(`Lỗi khi tạo phiếu đặt phòng: ${errorData.message || bookingRes.statusText}`);
+                }
+                const bookingData = await bookingRes.json();
+                const bookingId = bookingData.ma_phieu;
+
+                // 3. Add Selected Services
+                const selectedServices = Array.from(document.querySelectorAll('#dichVuContainer input[type=checkbox]:checked')).map(cb => {
+                    const serviceId = cb.value;
+                    const quantityInput = document.querySelector(`#dichVuContainer input[data-id="${serviceId}"]`);
+                    const quantity = parseInt(quantityInput.value, 10);
+                    
+                    if (isNaN(quantity) || quantity < 1) {
+                        throw new Error(`Số lượng dịch vụ ${allServices.find(s => s.ma_dv === serviceId)?.ten_dv || serviceId} không hợp lệ.`);
+                    }
+                    return { ma_dv: serviceId, so_luong: quantity };
+                });
+
+                for (let service of selectedServices) {
+                    const serviceBookingPayload = {
+                        ma_phieu: bookingId,
+                        ma_dv: service.ma_dv,
+                        so_luong: service.so_luong,
+                        ngay_su_dung: checkinDate // Assume service is used on check-in date
+                    };
+                    const serviceRes = await fetch('/api/datphong/dichvu', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(serviceBookingPayload)
+                    });
+                    if (!serviceRes.ok) {
+                        const errorData = await serviceRes.json();
+                        console.error(`Lỗi thêm dịch vụ ${service.ma_dv}:`, errorData);
+                        // Do not throw, but log error for individual service
+                    }
+                }
+
+                alert('Đặt phòng thành công!');
+                // Optional: Redirect or reload to clear form
+                location.reload(); 
+
+            } catch (error) {
+                console.error("Lỗi đặt phòng:", error);
+                alert(`Đặt phòng thất bại: ${error.message}`);
+            }
+        }
+
+        // --- Initial Load on Page ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set current date as default for "Ngày đặt"
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('ngayDat').value = today;
+
+            loadOldCustomers();
+            loadAvailableRooms();
+            loadServices();
+        });
+    </script>
+</body>
+</html>
