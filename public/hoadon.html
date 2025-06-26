@@ -53,7 +53,13 @@
 
     <!-- Detail Popup -->
     <div id="detailPopup" class="popup-container">
-        <div class="popup-content"><h2 class="text-2xl font-bold mb-5 text-gray-800">Chi tiết Hóa đơn</h2><div id="detailContent" class="text-base text-gray-700 leading-relaxed space-y-2 max-h-96 overflow-y-auto pr-2"></div><div class="flex justify-end mt-6"><button onclick="closePopup('detailPopup')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-lg shadow-md">Đóng</button></div></div>
+        <div class="popup-content"><h2 class="text-2xl font-bold mb-5 text-gray-800">Chi tiết Hóa đơn</h2><div id="detailContent" class="text-base text-gray-700 leading-relaxed space-y-2 max-h-96 overflow-y-auto pr-2"></div>
+            <div class="flex justify-end mt-6 space-x-3">
+                <!-- Nút Thanh toán chỉ hiển thị khi trạng thái là 'Đang xử lí' -->
+                <button id="markPaidButton" onclick="" class="bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2 rounded-lg shadow-md hidden">Đánh dấu Đã thanh toán</button>
+                <button onclick="closePopup('detailPopup')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-lg shadow-md">Đóng</button>
+            </div>
+        </div>
     </div>
     
     <script>
@@ -71,6 +77,22 @@
                 if (!res.ok) throw new Error('Lỗi tải hóa đơn');
                 allInvoices = await res.json();
                 renderInvoices(allInvoices);
+
+                // Kiểm tra URL parameters để xem có hóa đơn cụ thể cần hiển thị không
+                const urlParams = new URLSearchParams(window.location.search);
+                const invoiceIdFromUrl = urlParams.get('id');
+                if (invoiceIdFromUrl) {
+                    // Sau khi tải xong danh sách, tìm và hiển thị hóa đơn cụ thể
+                    const specificInvoice = allInvoices.find(inv => inv.ma_hd === invoiceIdFromUrl);
+                    if (specificInvoice) {
+                        viewInvoiceDetail(specificInvoice.ma_hd); // Gọi hàm hiển thị chi tiết
+                        // Xóa tham số ID khỏi URL để tránh popup lại khi tải lại trang
+                        history.replaceState({}, document.title, window.location.pathname);
+                    } else {
+                        alert('Không tìm thấy hóa đơn được yêu cầu.');
+                    }
+                }
+
             } catch (error) {
                 tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500">Lỗi: ${error.message}</td></tr>`;
             }
@@ -110,7 +132,7 @@
         }
         
         async function deleteInvoice(ma_hd) {
-            if (!confirm("Xóa hóa đơn này?")) return;
+            if (!confirm("Bạn chắc chắn muốn xoá hóa đơn này?")) return; // Cải thiện confirm
             try {
                 const res = await fetch(`/api/hoadon/${ma_hd}`, { method: 'DELETE' });
                 if (!res.ok) throw new Error('Thao tác thất bại');
@@ -119,28 +141,91 @@
             } catch (error) { alert(`Lỗi: ${error.message}`); }
         }
 
+        // Hàm mới để đánh dấu hóa đơn đã thanh toán
+        async function markInvoiceAsPaid(ma_hd) {
+            if (!confirm("Bạn có chắc chắn muốn đánh dấu hóa đơn này là Đã thanh toán?")) return;
+            try {
+                const res = await fetch(`/api/hoadon/${ma_hd}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ trang_thai_thanh_toan: 'da_thanh_toan' })
+                });
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(`Cập nhật thất bại: ${errorData.message || res.statusText}`);
+                }
+                alert('Hóa đơn đã được đánh dấu là Đã thanh toán!');
+                closePopup('detailPopup'); // Đóng popup
+                fetchAndRender(); // Tải lại danh sách để cập nhật trạng thái
+            } catch (error) {
+                console.error("Lỗi khi đánh dấu hóa đơn đã thanh toán:", error);
+                alert(`Lỗi: ${error.message}. Vui lòng kiểm tra console.`);
+            }
+        }
+
+
         function viewInvoiceDetail(ma_hd) {
             const hd = allInvoices.find(inv => inv.ma_hd === ma_hd);
             if (!hd) return alert('Không tìm thấy hóa đơn.');
             const detailDiv = document.getElementById("detailContent");
-            let content = `<h3 class="text-xl font-semibold mb-3">Thông tin Hóa đơn</h3>
-                <p><b>Mã HĐ:</b> ${hd.ma_hd}</p><p><b>Mã phiếu:</b> ${hd.ma_phieu}</p>
+            const markPaidButton = document.getElementById("markPaidButton");
+            
+            // Xử lý hiển thị hình thức thanh toán
+            let hinhThucTTText = 'Chưa xác định';
+            if (hd.hinh_thuc_thanh_toan) {
+                switch(hd.hinh_thuc_thanh_toan) {
+                    case 'cash': hinhThucTTText = 'Tiền mặt'; break;
+                    case 'banking': hinhThucTTText = 'Chuyển khoản'; break;
+                    case 'momo': hinhThucTTText = 'MoMo'; break;
+                    case 'zalopay': hinhThucTTText = 'ZaloPay'; break;
+                    default: hinhThucTTText = hd.hinh_thuc_thanh_toan;
+                }
+            }
+
+            let content = `
+                <h3 class="text-xl font-semibold mb-3">Thông tin Hóa đơn</h3>
+                <p><b>Mã HĐ:</b> ${hd.ma_hd}</p>
+                <p><b>Mã phiếu:</b> ${hd.ma_phieu}</p>
                 <p><b>Ngày lập:</b> ${hd.ngay_lap ? new Date(hd.ngay_lap).toLocaleDateString('vi-VN') : 'N/A'}</p>
                 <p><b>Tổng tiền:</b> ${parseFloat(hd.tong_tien || 0).toLocaleString('vi-VN')} đ</p>
-                <p><b>Trạng thái:</b> ${getStatusInfo(hd.trang_thai_thanh_toan).text}</p>`;
-            if (hd.khach_hang) content += `<p><b>Khách hàng:</b> ${hd.khach_hang.ten_kh} (${hd.khach_hang.sdt})</p>`;
+                <p><b>Trạng thái:</b> ${getStatusInfo(hd.trang_thai_thanh_toan).text}</p>
+                <p><b>Hình thức thanh toán:</b> ${hinhThucTTText}</p>
+            `;
+            // Hiển thị tên nhân viên nếu có
+            if (hd.nhan_vien_lap) {
+                content += `<p><b>Nhân viên lập:</b> ${hd.nhan_vien_lap}</p>`;
+            }
+            if (hd.khach_hang) {
+                content += `<p><b>Khách hàng:</b> ${hd.khach_hang.ten_kh} (${hd.khach_hang.sdt})</p>`;
+            }
+
             if (hd.thong_tin_dat_phong) {
-                content += `<h3 class="text-xl font-semibold mt-4 mb-2 border-t pt-3">Đặt phòng</h3>
+                const ngayNhan = hd.thong_tin_dat_phong.ngay_nhan ? new Date(hd.thong_tin_dat_phong.ngay_nhan).toLocaleDateString('vi-VN') : 'N/A';
+                const ngayTra = hd.thong_tin_dat_phong.ngay_tra ? new Date(hd.thong_tin_dat_phong.ngay_tra).toLocaleDateString('vi-VN') : 'N/A';
+                content += `
+                    <h3 class="text-xl font-semibold mt-4 mb-2 border-t pt-3">Đặt phòng</h3>
                     <p><b>Phòng:</b> ${hd.thong_tin_dat_phong.phong_da_dat.map(p => p.so_phong).join(', ')}</p>
-                    <p><b>Thời gian ở:</b> ${hd.thong_tin_dat_phong.so_dem || 0} đêm</p>`;
+                    <p><b>Thời gian ở:</b> Từ ${ngayNhan} đến ${ngayTra} (${hd.thong_tin_dat_phong.so_dem || 0} đêm)</p>
+                `;
             }
             if (hd.dich_vu_da_dung && hd.dich_vu_da_dung.length > 0) {
                 content += `<h3 class="text-xl font-semibold mt-4 mb-2 border-t pt-3">Dịch vụ</h3><ul>`;
-                hd.dich_vu_da_dung.forEach(dv => { if(dv.ten_dv) content += `<li class="ml-4">- ${dv.ten_dv} (SL: ${dv.so_luong})</li>`; });
+                hd.dich_vu_da_dung.forEach(dv => { 
+                    if(dv.ten_dv) content += `<li class="ml-4">- ${dv.ten_dv} (SL: ${dv.so_luong})</li>`; 
+                });
                 content += `</ul>`;
             }
             detailDiv.innerHTML = content;
             openPopup('detailPopup');
+
+            // Hiển thị/ẩn nút 'Đánh dấu Đã thanh toán'
+            if (hd.trang_thai_thanh_toan === 'dang_xu_li') {
+                markPaidButton.classList.remove('hidden');
+                markPaidButton.onclick = () => markInvoiceAsPaid(ma_hd); // Gắn sự kiện click
+            } else {
+                markPaidButton.classList.add('hidden');
+                markPaidButton.onclick = null; // Xóa sự kiện để tránh rò rỉ bộ nhớ
+            }
         }
 
         let searchTimeout;

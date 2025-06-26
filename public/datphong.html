@@ -69,9 +69,9 @@
                 <input type="text" id="diaChiKH" placeholder="Địa chỉ" class="border border-gray-300 px-3 py-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 <select id="gioiTinhKH" class="border border-gray-300 px-3 py-2 rounded-md w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">-- Chọn giới tính --</option>
-                    <option value="Nam">Nam</option>
-                    <option value="Nữ">Nữ</option>
-                    <option value="Khác">Khác</option>
+                    <option value="nam">Nam</option>
+                    <option value="nữ">Nữ</option>
+                    <option value="khác">Khác</option>
                 </select>
                 <input type="text" id="quocTichKH" placeholder="Quốc tịch" class="border border-gray-300 px-3 py-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
@@ -79,13 +79,7 @@
 
         <div class="bg-white p-6 rounded-lg shadow space-y-4">
             <h3 class="text-lg font-semibold text-gray-700">Thông tin phòng và thời gian</h3>
-            <div>
-                <label for="phongSelect" class="block text-gray-700 text-sm font-bold mb-2">Chọn phòng trống:</label>
-                <select id="phongSelect" class="border border-gray-300 px-3 py-2 rounded-md w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">-- Đang tải phòng trống --</option>
-                </select>
-            </div>
-
+            
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label for="ngayDat" class="block text-gray-700 text-sm font-bold mb-2">Ngày đặt:</label>
@@ -100,6 +94,28 @@
                     <input type="date" id="ngayTra" required class="border border-gray-300 px-3 py-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
             </div>
+
+            <div>
+                <label for="phongSelectionContainer" class="block text-gray-700 text-sm font-bold mb-2">Chọn phòng trống:</label>
+                <div id="phongSelectionContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <p class="text-gray-500">Vui lòng chọn Ngày nhận và Ngày trả phòng.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow space-y-4">
+            <h3 class="text-lg font-semibold text-gray-700">Thông tin thanh toán và Nhân viên</h3>
+            <select id="hinhThucThanhToan" class="border border-gray-300 px-3 py-2 rounded-md w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">-- Chọn hình thức thanh toán --</option>
+                <option value="cash">Tiền mặt</option>
+                <option value="banking">Chuyển khoản</option>
+                <option value="momo">MoMo</option>
+                <option value="zalopay">ZaloPay</option>
+            </select>
+            <select id="maNVThucHien" class="border border-gray-300 px-3 py-2 rounded-md w-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">-- Chọn nhân viên thực hiện --</option>
+                <!-- Options sẽ được tải động bằng JavaScript -->
+            </select>
         </div>
 
         <div class="bg-white p-6 rounded-lg shadow space-y-4">
@@ -120,6 +136,7 @@
         // Global variables to store fetched data
         let allCustomers = [];
         let allServices = [];
+        let allEmployees = []; // Để lưu danh sách nhân viên
 
         // --- Event Listeners for UI interaction ---
         document.querySelectorAll('input[name="khOption"]').forEach(radio => {
@@ -143,11 +160,29 @@
             renderCustomerSelect(filtered);
         });
 
-        // --- Fetching Data from APIs ---
+        // Lắng nghe sự kiện thay đổi trên các input ngày để tải lại phòng
+        document.getElementById('ngayNhan').addEventListener('change', updateAvailableRooms);
+        document.getElementById('ngayTra').addEventListener('change', updateAvailableRooms);
 
-        /**
-         * Loads existing customers from API and renders them to the select dropdown.
-         */
+        async function updateAvailableRooms() {
+            const ngayNhan = document.getElementById('ngayNhan').value;
+            const ngayTra = document.getElementById('ngayTra').value;
+
+            // Chỉ tải phòng nếu cả hai ngày đã được chọn
+            if (ngayNhan && ngayTra) {
+                // Kiểm tra hợp lệ của ngày trước khi gọi API
+                const d_ngayNhan = new Date(ngayNhan);
+                const d_ngayTra = new Date(ngayTra);
+                // Đảm bảo ngày trả phải SAU ngày nhận. Nếu không, hiển thị lỗi và không tải phòng.
+                if (d_ngayNhan >= d_ngayTra) {
+                    document.getElementById('phongSelectionContainer').innerHTML = '<p class="text-red-500">Ngày trả phòng phải sau Ngày nhận phòng.</p>';
+                    return;
+                }
+                loadAvailableRooms(ngayNhan, ngayTra);
+            } else {
+                document.getElementById('phongSelectionContainer').innerHTML = '<p class="text-gray-500">Vui lòng chọn Ngày nhận và Ngày trả phòng.</p>';
+            }
+        }
         async function loadOldCustomers() {
             try {
                 const selectElement = document.getElementById('khachCuSelect');
@@ -167,10 +202,6 @@
             }
         }
 
-        /**
-         * Renders the provided list of customers into the old customer select dropdown.
-         * @param {Array} customersList - The list of customer objects to render.
-         */
         function renderCustomerSelect(customersList) {
             const selectElement = document.getElementById('khachCuSelect');
             selectElement.innerHTML = '<option value="">-- Chọn khách hàng cũ --</option>'; // Reset options
@@ -188,45 +219,69 @@
             });
         }
 
-        /**
-         * Loads available rooms from API and renders them to the select dropdown.
-         */
-        async function loadAvailableRooms() {
+        async function loadAvailableRooms(ngayNhan, ngayTra) {
             try {
-                const selectElement = document.getElementById('phongSelect');
-                selectElement.innerHTML = '<option value="">-- Đang tải phòng trống --</option>'; // Show loading state
+                const container = document.getElementById('phongSelectionContainer');
+                container.innerHTML = '<p class="text-gray-500">Đang tải phòng trống...</p>';
 
-                const res = await fetch('/api/phong', { cache: 'no-cache' });
+                // Truyền ngày nhận và ngày trả vào query parameters
+                const url = `/api/phong?ngay_nhan=${encodeURIComponent(ngayNhan)}&ngay_tra=${encodeURIComponent(ngayTra)}`;
+                const res = await fetch(url, { cache: 'no-cache' });
+
                 if (!res.ok) {
-                    // Try to read error message from response body
                     const errorText = await res.text();
                     throw new Error(`HTTP error! status: ${res.status}, body: ${errorText}`);
                 }
                 const rooms = await res.json();
-                console.log("Dữ liệu phòng từ API:", rooms); // Log để kiểm tra dữ liệu trả về
-
-                const availableRooms = rooms.filter(p => p.trang_thai === 'Trong');
-                console.log("Phòng trống sau khi lọc ('Trong'):", availableRooms); // Log để kiểm tra kết quả lọc
+                console.log("Dữ liệu phòng từ API (theo ngày):", rooms);
                 
-                selectElement.innerHTML = '<option value="">-- Chọn phòng trống --</option>'; // Reset before adding filtered rooms
+                container.innerHTML = ''; // Clear loading message
 
-                if (availableRooms.length === 0) {
-                    selectElement.innerHTML = '<option value="">Không có phòng trống</option>';
+                if (rooms.length === 0) { // Không còn là availableRooms.filter nữa, backend đã lọc
+                    container.innerHTML = '<p class="text-gray-500">Không có phòng trống trong khoảng thời gian này.</p>';
                     return;
                 }
 
-                availableRooms.forEach(p => {
-                    const option = document.createElement('option');
-                    option.value = p.ma_phong;
-                    // Đảm bảo p.gia_phong tồn tại và là số để định dạng
-                    const giaPhong = typeof p.gia_phong === 'number' ? p.gia_phong.toLocaleString('vi-VN') : 'N/A';
-                    option.textContent = `Phòng ${p.so_phong} - ${p.loai_phong} (${giaPhong} đ/đêm)`;
-                    selectElement.appendChild(option);
+                rooms.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center space-x-2 border p-3 rounded-md bg-gray-50';
+                    const giaPhong = typeof p.gia === 'number' ? p.gia.toLocaleString('vi-VN') : 'N/A';
+                    div.innerHTML = `
+                        <input type="checkbox" id="room_${p.ma_phong}" value="${p.ma_phong}" name="selectedRooms" class="form-checkbox h-4 w-4 text-blue-600" />
+                        <label for="room_${p.ma_phong}" class="flex-grow text-gray-800">Phòng ${p.so_phong} - ${p.loai_phong} <span class="text-gray-500 text-sm">(${giaPhong} đ/đêm)</span></label>
+                    `;
+                    container.appendChild(div);
                 });
             } catch (error) {
                 console.error("Lỗi tải danh sách phòng:", error);
-                document.getElementById('phongSelect').innerHTML = '<option value="">Lỗi tải phòng</option>';
+                document.getElementById('phongSelectionContainer').innerHTML = '<p class="text-red-500">Lỗi tải phòng.</p>';
                 alert(`Lỗi khi tải danh sách phòng: ${error.message}. Vui lòng kiểm tra console.`);
+            }
+        }
+
+        /**
+         * Tải danh sách nhân viên và điền vào dropdown.
+         */
+        async function loadEmployees() {
+            try {
+                const selectElement = document.getElementById('maNVThucHien');
+                selectElement.innerHTML = '<option value="">-- Đang tải nhân viên --</option>';
+                const res = await fetch('/api/nhanvien', { cache: 'no-cache' }); 
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    throw new Error(`HTTP error! status: ${res.status}, body: ${errorText}`);
+                }
+                allEmployees = await res.json();
+                selectElement.innerHTML = '<option value="">-- Chọn nhân viên thực hiện --</option>';
+                allEmployees.forEach(nv => {
+                    const option = document.createElement('option');
+                    option.value = nv.ma_nv;
+                    option.textContent = `${nv.ten_nv} (${nv.ma_nv})`;
+                    selectElement.appendChild(option);
+                });
+            } catch (error) {
+                console.error("Lỗi tải danh sách nhân viên:", error);
+                document.getElementById('maNVThucHien').innerHTML = '<option value="">Lỗi tải nhân viên</option>';
             }
         }
 
@@ -270,11 +325,7 @@
             }
         }
 
-        // --- Main Booking Function ---
-
-        /**
-         * Handles the room booking process, including new customer creation and service assignment.
-         */
+       
         async function datPhong() {
             const isNewCustomer = document.querySelector('input[name="khOption"]:checked').value === 'moi';
             let customerId = '';
@@ -335,13 +386,33 @@
                     }
                 }
 
-                const roomId = document.getElementById('phongSelect').value;
+                // Lấy tất cả các phòng đã chọn từ checkboxes
+                const selectedRoomCheckboxes = Array.from(document.querySelectorAll('#phongSelectionContainer input[name="selectedRooms"]:checked'));
+                const roomIds = selectedRoomCheckboxes.map(checkbox => checkbox.value);
+
+                if (roomIds.length === 0) {
+                    alert('Vui lòng chọn ít nhất một phòng.');
+                    return;
+                }
+
                 const checkinDate = document.getElementById('ngayNhan').value;
                 const checkoutDate = document.getElementById('ngayTra').value;
                 const bookingDate = document.getElementById('ngayDat').value;
+                const hinhThucThanhToan = document.getElementById('hinhThucThanhToan').value;
+                const maNVThucHien = document.getElementById('maNVThucHien').value;
 
-                if (!roomId || !checkinDate || !checkoutDate || !bookingDate) {
-                    alert('Vui lòng chọn phòng và điền đầy đủ ngày đặt, ngày nhận, ngày trả.');
+
+                // Kiểm tra các trường ngày và hình thức thanh toán/nhân viên không rỗng
+                if (!checkinDate || !checkoutDate || !bookingDate) {
+                    alert('Vui lòng điền đầy đủ ngày đặt, ngày nhận, ngày trả.');
+                    return;
+                }
+                if (!hinhThucThanhToan) {
+                    alert('Vui lòng chọn hình thức thanh toán.');
+                    return;
+                }
+                if (!maNVThucHien) {
+                    alert('Vui lòng chọn nhân viên thực hiện.');
                     return;
                 }
 
@@ -359,29 +430,7 @@
                     return;
                 }
 
-                // 2. Create Booking (DatPhong)
-                const bookingPayload = {
-                    ma_kh: customerId,
-                    ma_phong: roomId,
-                    ngay_dat: bookingDate,
-                    ngay_nhan: checkinDate,
-                    ngay_tra: checkoutDate
-                };
-
-                const bookingRes = await fetch('/api/datphong', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(bookingPayload)
-                });
-
-                if (!bookingRes.ok) {
-                    const errorData = await bookingRes.json();
-                    throw new Error(`Lỗi khi tạo phiếu đặt phòng: ${errorData.message || bookingRes.statusText}`);
-                }
-                const bookingData = await bookingRes.json();
-                const bookingId = bookingData.ma_phieu;
-
-                // 3. Add Selected Services
+                // Lấy các dịch vụ đã chọn
                 const selectedServices = Array.from(document.querySelectorAll('#dichVuContainer input[type=checkbox]:checked')).map(cb => {
                     const serviceId = cb.value;
                     const quantityInput = document.querySelector(`#dichVuContainer input[data-id="${serviceId}"]`);
@@ -393,28 +442,35 @@
                     return { ma_dv: serviceId, so_luong: quantity };
                 });
 
-                for (let service of selectedServices) {
-                    const serviceBookingPayload = {
-                        ma_phieu: bookingId,
-                        ma_dv: service.ma_dv,
-                        so_luong: service.so_luong,
-                        ngay_su_dung: checkinDate // Assume service is used on check-in date
-                    };
-                    const serviceRes = await fetch('/api/datphong/dichvu', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(serviceBookingPayload)
-                    });
-                    if (!serviceRes.ok) {
-                        const errorData = await serviceRes.json();
-                        console.error(`Lỗi thêm dịch vụ ${service.ma_dv}:`, errorData);
-                        // Do not throw, but log error for individual service
-                    }
+                // 2. Create Booking (DatPhong)
+                const bookingPayload = {
+                    ma_kh: customerId,
+                    ma_phongs: roomIds, // Gửi một MẢNG các ID phòng tới backend
+                    ngay_dat: bookingDate,
+                    ngay_nhan: checkinDate,
+                    ngay_tra: checkoutDate,
+                    hinh_thuc_thanh_toan: hinhThucThanhToan, // Gửi hình thức thanh toán
+                    ma_nv_thuc_hien: maNVThucHien, // Gửi mã nhân viên
+                    dich_vu_da_dung: selectedServices // Gửi danh sách dịch vụ đã chọn
+                };
+
+                const bookingRes = await fetch('/api/datphong', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(bookingPayload)
+                });
+
+                if (!bookingRes.ok) {
+                    const errorData = await bookingRes.json();
+                    throw new Error(`Lỗi khi tạo phiếu đặt phòng: ${errorData.message || res.statusText}`);
                 }
+                const bookingData = await bookingRes.json();
+                const bookingId = bookingData.ma_phieu;
+                const invoiceId = bookingData.ma_hd; // Lấy mã hóa đơn từ phản hồi
 
                 alert('Đặt phòng thành công!');
-                // Optional: Redirect or reload to clear form
-                location.reload(); 
+                // Chuyển hướng đến trang chi tiết hóa đơn
+                window.location.href = `hoadon.html?id=${invoiceId}`; 
 
             } catch (error) {
                 console.error("Lỗi đặt phòng:", error);
@@ -429,8 +485,10 @@
             document.getElementById('ngayDat').value = today;
 
             loadOldCustomers();
-            loadAvailableRooms();
+            loadEmployees(); // Tải danh sách nhân viên
             loadServices();
+            // Ban đầu không tải phòng, chờ người dùng chọn ngày nhận/trả
+            document.getElementById('phongSelectionContainer').innerHTML = '<p class="text-gray-500">Vui lòng chọn Ngày nhận và Ngày trả phòng.</p>';
         });
     </script>
 </body>

@@ -1,5 +1,5 @@
 const pool = require('../db');
-const { generateId } = require('../utils/id.util');
+const { generateId } = require('../utils/id.util'); // Đảm bảo generateId được import đúng cách
 
 // GET /api/khachhang?search=
 const getAllKhachHang = async (req, res) => {
@@ -16,6 +16,7 @@ const getAllKhachHang = async (req, res) => {
     const result = await pool.query(query, [`%${search}%`]);
     res.json(result.rows);
   } catch (err) {
+    console.error("Lỗi trong getAllKhachHang:", err); // Thêm log lỗi chi tiết
     res.status(500).json({ error: err.message });
   }
 };
@@ -28,6 +29,7 @@ const getKhachHangById = async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Không tìm thấy khách hàng' });
     res.json(result.rows[0]);
   } catch (err) {
+    console.error("Lỗi trong getKhachHangById:", err); // Thêm log lỗi chi tiết
     res.status(500).json({ error: err.message });
   }
 };
@@ -36,7 +38,9 @@ const getKhachHangById = async (req, res) => {
 const createKhachHang = async (req, res) => {
   try {
     const { ten_kh, sdt, email, cmnd, dia_chi, ngay_sinh, gioi_tinh, quoc_tich } = req.body;
-    const ma_kh = await generateId('khach_hang', 'KH');
+    // SỬA LỖI TẠI ĐÂY: generateId là hàm đồng bộ, KHÔNG cần 'await'
+    const ma_kh = generateId('KH'); 
+    
     const insertQuery = `
       INSERT INTO khach_hang (ma_kh, ten_kh, sdt, email, cmnd, dia_chi, ngay_sinh, gioi_tinh, quoc_tich)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *;
@@ -45,6 +49,7 @@ const createKhachHang = async (req, res) => {
     const result = await pool.query(insertQuery, values);
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    console.error("Lỗi trong createKhachHang:", err); // Thêm log lỗi chi tiết
     res.status(500).json({ error: err.message });
   }
 };
@@ -65,6 +70,7 @@ const updateKhachHang = async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Không tìm thấy khách hàng' });
     res.json(result.rows[0]);
   } catch (err) {
+    console.error("Lỗi trong updateKhachHang:", err); // Thêm log lỗi chi tiết
     res.status(500).json({ error: err.message });
   }
 };
@@ -77,6 +83,7 @@ const deleteKhachHang = async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Không tìm thấy khách hàng' });
     res.json({ message: 'Đã xoá khách hàng' });
   } catch (err) {
+    console.error("Lỗi trong deleteKhachHang:", err); // Thêm log lỗi chi tiết
     res.status(500).json({ error: err.message });
   }
 };

@@ -18,7 +18,7 @@ app.use('/api/phong', require('./routes/phong.route'));
 app.use('/api/dichvu', require('./routes/dichvu.route'));
 app.use('/api/hoadon', require('./routes/hoadon.route'));
 app.use('/api/datphong', require('./routes/datphong.route'));
-
+app.use('/api/nhanvien', require('./routes/nhanvien.route'));
 // Test DB connection
 app.get('/api', async (req, res) => {
   try {
