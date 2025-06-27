@@ -4,6 +4,45 @@
   <meta charset="UTF-8" />
   <title>Quản lý Phòng</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    /* Custom styles for status badges */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.65rem;
+        border-radius: 9999px; /* Full rounded */
+        font-weight: 600;
+        font-size: 0.75rem; /* text-xs */
+        line-height: 1;
+        white-space: nowrap;
+    }
+    .status-Trong {
+        background-color: #d1fae5; /* green-100 */
+        color: #065f46; /* green-800 */
+    }
+    .status-Da_dat {
+        background-color: #ffedd5; /* orange-100 */
+        color: #9a3412; /* orange-800 */
+    }
+    .status-Dang_o {
+        background-color: #fee2e2; /* red-100 */
+        color: #991b1b; /* red-800 */
+    }
+    .status-Bao_tri {
+        background-color: #e0e7ff; /* indigo-100 */
+        color: #3730a3; /* indigo-800 */
+    }
+    /* Màu sắc cho trạng thái theo ngày */
+    .status-AvailableByDate {
+        background-color: #d1fae5; /* green-100 */
+        color: #065f46; /* green-800 */
+    }
+    .status-BookedByDate {
+        background-color: #ffedd5; /* orange-100 */
+        color: #9a3412; /* orange-800 */
+    }
+  </style>
 </head>
 <body class="bg-gray-100">
 
@@ -26,10 +65,27 @@
   <main class="p-6 max-w-6xl mx-auto">
 
     <!-- Tìm kiếm và Thêm -->
-    <div class="flex gap-2 mb-4">
-      <input type="text" id="search" placeholder="Tìm kiếm số phòng..." class="border p-2 rounded w-full">
-      <button onclick="loadPhong()" class="bg-blue-600 text-white px-4 py-2 rounded">Tìm</button>
-      <button onclick="openForm()" class="bg-green-600 text-white px-4 py-2 rounded">+ Thêm phòng</button>
+    <div class="flex flex-col sm:flex-row flex-wrap gap-2 mb-4">
+      <input type="text" id="search" placeholder="Tìm kiếm số phòng..." class="border p-2 rounded w-full sm:flex-grow">
+      
+      <input type="date" id="ngayNhanPhongSearch" title="Ngày nhận phòng để tìm kiếm" class="border p-2 rounded w-full sm:w-auto">
+      <input type="date" id="ngayTraPhongSearch" title="Ngày trả phòng để tìm kiếm" class="border p-2 rounded w-full sm:w-auto">
+
+      <select id="statusFilter" class="border p-2 rounded w-full sm:w-48">
+        <option value="">Tất cả trạng thái</option>
+        <option value="Trong">Trống</option>
+        <option value="Da_dat">Đã đặt</option>
+        <option value="Dang_o">Đang ở</option>
+        <option value="Bao_tri">Bảo trì</option>
+      </select>
+      <select id="roomTypeFilter" class="border p-2 rounded w-full sm:w-48">
+        <option value="">Tất cả loại phòng</option>
+        <option value="Standard">Standard</option>
+        <option value="Luxury">Luxury</option>
+        <option value="President">President</option>
+      </select>
+      <button onclick="loadPhong()" class="bg-blue-600 text-white px-4 py-2 rounded w-full sm:w-auto">Tìm</button>
+      <button onclick="openForm()" class="bg-green-600 text-white px-4 py-2 rounded w-full sm:w-auto">+ Thêm phòng</button>
     </div>
 
     <!-- Bảng danh sách -->
@@ -62,8 +118,8 @@
           <input id="gia" placeholder="Giá" type="number" class="w-full border px-3 py-2 rounded" />
           <select id="trang_thai" class="w-full border px-3 py-2 rounded">
             <option value="Trong">Trong</option>
-            <option value="Dang_o">Đang ở</option>
             <option value="Da_dat">Đã đặt</option>
+            <option value="Dang_o">Đang ở</option>
             <option value="Bao_tri">Bảo trì</option>
           </select>
           <div class="flex justify-end gap-2">
@@ -90,29 +146,108 @@
   <script>
     async function loadPhong() {
       const search = document.getElementById("search").value;
-      const res = await fetch('/api/phong?search=' + encodeURIComponent(search));
+      const ngayNhan = document.getElementById("ngayNhanPhongSearch").value;
+      const ngayTra = document.getElementById("ngayTraPhongSearch").value;
+      const statusFilter = document.getElementById("statusFilter").value;
+      const roomTypeFilter = document.getElementById("roomTypeFilter").value;
+
+      let url = '/api/phong?';
+      let params = [];
+      if (search) params.push(`search=${encodeURIComponent(search)}`);
+      if (ngayNhan) params.push(`ngay_nhan=${encodeURIComponent(ngayNhan)}`);
+      if (ngayTra) params.push(`ngay_tra=${encodeURIComponent(ngayTra)}`);
+      if (statusFilter) params.push(`trang_thai=${encodeURIComponent(statusFilter)}`);
+      if (roomTypeFilter) params.push(`loai_phong=${encodeURIComponent(roomTypeFilter)}`);
+      
+      url += params.join('&');
+
+      const res = await fetch(url); 
       const data = await res.json();
       const tbody = document.getElementById("phongTable");
       tbody.innerHTML = "";
       data.forEach(p => {
         const tr = document.createElement("tr");
         tr.className = "border-t";
+
+        // Determine status badge classes and text
+        let statusText = '';
+        let statusClass = '';
+        if (ngayNhan && ngayTra) {
+            // Khi có ngày, ưu tiên hiển thị trạng thái theo khả dụng trong khoảng ngày
+            if (p.is_booked_in_range) {
+                statusText = 'Bận (theo ngày)';
+                statusClass = 'status-BookedByDate';
+            } else {
+                statusText = 'Trống (theo ngày)';
+                statusClass = 'status-AvailableByDate';
+            }
+        } else {
+            // Khi không có ngày, hiển thị trạng thái tổng quát
+            switch(p.trang_thai) {
+              case 'Trong': statusText = 'Trống'; statusClass = 'status-Trong'; break;
+              case 'Da_dat': statusText = 'Đã đặt'; statusClass = 'status-Da_dat'; break;
+              case 'Dang_o': statusText = 'Đang ở'; statusClass = 'status-Dang_o'; break;
+              case 'Bao_tri': statusText = 'Bảo trì'; statusClass = 'status-Bao_tri'; break;
+              default: statusText = p.trang_thai; statusClass = 'bg-gray-200 text-gray-800'; break;
+            }
+        }
+
+
         tr.innerHTML = `
           <td class="p-2">${p.ma_phong}</td>
           <td class="p-2">${p.so_phong}</td>
           <td class="p-2">${p.loai_phong}</td>
           <td class="p-2">${p.loai_giuong}</td>
           <td class="p-2">${parseFloat(p.gia).toLocaleString('vi-VN')} đ</td>
-          <td class="p-2">${p.trang_thai}</td>
-          <td class="p-2 space-x-2">
-            <button onclick='viewPhong(${JSON.stringify(p)})' class="text-blue-600 hover:underline">👁</button>
-            <button onclick='editPhong(${JSON.stringify(p)})' class="text-yellow-600 hover:underline">✏</button>
-            <button onclick='delPhong("${p.ma_phong}")' class="text-red-600 hover:underline">🗑</button>
+          <td class="p-2 text-center"><span class="status-badge ${statusClass}">${statusText}</span></td>
+          <td class="p-2 space-x-2 text-center">
+            <button onclick='viewPhong("${p.ma_phong}")' class="text-blue-600 hover:underline" title="Xem"><i class="fas fa-eye"></i></button>
+            <button onclick='editPhong(${JSON.stringify(p)})' class="text-yellow-600 hover:underline" title="Sửa"><i class="fas fa-pencil-alt"></i></button>
+            <button onclick='delPhong("${p.ma_phong}")' class="text-red-600 hover:underline" title="Xóa"><i class="fas fa-trash-alt"></i></button>
+            ${p.trang_thai === 'Da_dat' ? `<button onclick='checkIn("${p.ma_phong}")' class="text-green-600 hover:underline" title="Check-in"><i class="fas fa-sign-in-alt"></i> Check-in</button>` : ''}
+            ${p.trang_thai === 'Dang_o' ? `<button onclick='checkOut("${p.ma_phong}")' class="text-purple-600 hover:underline" title="Check-out"><i class="fas fa-sign-out-alt"></i> Check-out</button>` : ''}
           </td>
         `;
         tbody.appendChild(tr);
       });
     }
+
+    // Các hàm Check-in/Check-out mới
+    async function checkIn(ma_phong) {
+        if (confirm(`Bạn có chắc chắn muốn Check-in phòng ${ma_phong} không?`)) {
+            try {
+                const res = await fetch(`/api/phong/${ma_phong}/checkin`, { method: 'PUT' });
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(errorData.error || 'Lỗi khi Check-in phòng.');
+                }
+                alert(`Phòng ${ma_phong} đã được Check-in thành công!`);
+                loadPhong(); // Tải lại danh sách phòng
+            } catch (error) {
+                console.error("Lỗi Check-in:", error);
+                alert(`Check-in thất bại: ${error.message}`);
+            }
+        }
+    }
+
+    async function checkOut(ma_phong) {
+        if (confirm(`Bạn có chắc chắn muốn Check-out phòng ${ma_phong} không?`)) {
+            try {
+                const res = await fetch(`/api/phong/${ma_phong}/checkout`, { method: 'PUT' });
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(errorData.error || 'Lỗi khi Check-out phòng.');
+                }
+                alert(`Phòng ${ma_phong} đã được Check-out thành công!`);
+                loadPhong(); // Tải lại danh sách phòng
+                // TODO: Ở đây bạn có thể thêm logic để mở hóa đơn hoặc xác nhận thanh toán cuối cùng
+            } catch (error) {
+                console.error("Lỗi Check-out:", error);
+                alert(`Check-out thất bại: ${error.message}`);
+            }
+        }
+    }
+
 
     function openForm() {
       document.getElementById("phongForm").reset();
@@ -125,7 +260,7 @@
       document.getElementById("formPopup").classList.add("hidden");
     }
 
-    function editPhong(p) {
+    function editPhong(p) { // Hàm editPhong vẫn nhận đối tượng phòng từ loadPhong
       openForm();
       for (let key in p) {
         if (document.getElementById(key)) {
@@ -135,17 +270,46 @@
       document.getElementById("formTitle").innerText = "Sửa Phòng";
     }
 
-    function viewPhong(p) {
+    // THAY ĐỔI LỚN TẠI ĐÂY: viewPhong sẽ gọi API riêng để lấy chi tiết phòng và lịch đặt
+    async function viewPhong(ma_phong) {
       const d = document.getElementById("detailContent");
-      d.innerHTML = `
-        <p><b>Mã:</b> ${p.ma_phong}</p>
-        <p><b>Số phòng:</b> ${p.so_phong}</p>
-        <p><b>Loại:</b> ${p.loai_phong}</p>
-        <p><b>Giường:</b> ${p.loai_giuong}</p>
-        <p><b>Giá:</b> ${parseFloat(p.gia).toLocaleString('vi-VN')} đ</p>
-        <p><b>Trạng thái:</b> ${p.trang_thai}</p>
-      `;
-      document.getElementById("detailPopup").classList.remove("hidden");
+      d.innerHTML = `<p class="text-gray-500 text-center">Đang tải chi tiết...</p>`;
+      document.getElementById("detailPopup").classList.remove("hidden"); // Hiển thị popup loading
+
+      try {
+        const res = await fetch(`/api/phong/${ma_phong}`);
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Lỗi khi lấy chi tiết phòng.');
+        }
+        const p = await res.json(); // Nhận đối tượng phòng đầy đủ từ API
+
+        let lichDatHtml = '';
+        if (p.lich_dat_gan_nhat && p.lich_dat_gan_nhat.length > 0) {
+            lichDatHtml = '<h4 class="font-semibold mt-4">Lịch đặt sắp tới/hiện tại:</h4><ul class="list-disc pl-5">';
+            p.lich_dat_gan_nhat.forEach(booking => {
+                const ngayNhan = new Date(booking.ngay_nhan).toLocaleDateString('vi-VN');
+                const ngayTra = new Date(booking.ngay_tra).toLocaleDateString('vi-VN');
+                lichDatHtml += `<li><b>Phiếu:</b> ${booking.ma_phieu} | <b>Khách:</b> ${booking.ten_kh} (${booking.sdt_kh}) | Từ ${ngayNhan} đến ${ngayTra}</li>`;
+            });
+            lichDatHtml += '</ul>';
+        } else {
+            lichDatHtml = '<p class="text-gray-600">Không có lịch đặt sắp tới/hiện tại.</p>';
+        }
+
+        d.innerHTML = `
+          <p><b>Mã:</b> ${p.ma_phong}</p>
+          <p><b>Số phòng:</b> ${p.so_phong}</p>
+          <p><b>Loại:</b> ${p.loai_phong}</p>
+          <p><b>Giường:</b> ${p.loai_giuong}</p>
+          <p><b>Giá:</b> ${parseFloat(p.gia).toLocaleString('vi-VN')} đ</p>
+          <p><b>Trạng thái tổng quát:</b> ${p.trang_thai}</p>
+          ${lichDatHtml}
+        `;
+      } catch (error) {
+        console.error("Lỗi khi xem chi tiết phòng:", error);
+        d.innerHTML = `<p class="text-red-500">Lỗi: ${error.message}</p>`;
+      }
     }
 
     function closeDetail() {
@@ -178,6 +342,13 @@
       closeForm();
       loadPhong();
     });
+    
+    // Thêm event listeners cho các bộ lọc
+    document.getElementById('statusFilter').addEventListener('change', loadPhong);
+    document.getElementById('roomTypeFilter').addEventListener('change', loadPhong);
+    document.getElementById('ngayNhanPhongSearch').addEventListener('change', loadPhong);
+    document.getElementById('ngayTraPhongSearch').addEventListener('change', loadPhong);
+
 
     loadPhong();
   </script>

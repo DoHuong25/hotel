@@ -1,6 +1,6 @@
 // datphong.controller.js - controller cho các thao tác đặt phòng
 const pool = require('../db'); // Import pool kết nối cơ sở dữ liệu
-const { generateId } = require('../utils/id.util'); // Import hàm tạo ID (đã sửa sang CommonJS trong id.util.js)
+const { generateId } = require('../utils/id.util'); // Import hàm tạo ID
 
 /**
  * Hàm trợ giúp để tính toán tổng tiền phòng dựa trên phiếu đặt.
@@ -91,6 +91,35 @@ const datPhong = async (req, res) => {
   try {
     await client.query('BEGIN'); // Bắt đầu transaction SQL
 
+    // Kiểm tra các phòng đã chọn có bị trùng lịch hay không TRƯỚC KHI TẠO PHIẾU
+    if (!ma_phongs || ma_phongs.length === 0) {
+      throw new Error('Không có phòng nào được chọn để đặt.');
+    }
+
+    // Vòng lặp kiểm tra từng phòng một
+    for (const phongId of ma_phongs) {
+        const checkOverlapQuery = `
+            SELECT 1
+            FROM phong_dat pdph
+            JOIN phieu_dat pd ON pdph.ma_phieu = pd.ma_phieu
+            WHERE pdph.ma_phong = $1
+              AND (
+                    (pd.ngay_nhan < $2 AND pd.ngay_tra > $3) 
+                    OR (pd.ngay_nhan >= $3 AND pd.ngay_nhan < $2) 
+                    OR (pd.ngay_tra > $3 AND pd.ngay_tra <= $2) 
+                    OR (pd.ngay_nhan <= $3 AND pd.ngay_tra >= $2) 
+                  )
+            LIMIT 1;
+        `;
+        const overlapResult = await client.query(checkOverlapQuery, [phongId, ngay_tra, ngay_nhan]);
+
+        if (overlapResult.rows.length > 0) {
+            // Nếu tìm thấy bất kỳ sự chồng chéo nào, hủy bỏ giao dịch
+            throw new Error(`Phòng ${phongId} đã bị bận trong khoảng thời gian từ ${ngay_nhan} đến ${ngay_tra}. Vui lòng chọn phòng khác.`);
+        }
+    }
+
+
     // 1. Tạo ID phiếu đặt
     const ma_phieu = generateId('PD'); 
 
@@ -102,10 +131,6 @@ const datPhong = async (req, res) => {
     console.log(`Đã tạo phiếu đặt: ${ma_phieu} cho KH: ${ma_kh}`);
 
     // 3. Xử lý đặt nhiều phòng: Chèn vào phong_dat và cập nhật trạng thái phòng
-    if (!ma_phongs || ma_phongs.length === 0) {
-      throw new Error('Không có phòng nào được chọn để đặt.');
-    }
-
     for (const phongId of ma_phongs) {
       const phongDat = generateId('PDPH'); // Tạo ID duy nhất cho mỗi bản ghi phong_dat
 
@@ -118,7 +143,7 @@ const datPhong = async (req, res) => {
 
       // Cập nhật trạng thái của phòng thành 'Da_dat' (đã đặt)
       await client.query(`
-        UPDATE phong SET trang_thai = 'Da_dat' WHERE ma_phong = $1;
+        UPDATE phong SET trang_thai = 'Da_dat' WHERE ma_phong = $1; 
       `, [phongId]);
       console.log(`Đã cập nhật trạng thái phòng ${phongId} thành 'Da_dat'`);
     }
